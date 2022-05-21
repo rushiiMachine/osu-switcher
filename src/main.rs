@@ -8,8 +8,6 @@ use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-
     let osu_flag = Flag::new("osu", FlagType::String)
         .description("osu! game directory path");
     let server_flag = Flag::new("server", FlagType::String)
@@ -36,7 +34,7 @@ fn main() {
         .action(configure)
         .command(switch_cmd)
         .command(configure_cmd)
-        .run(args);
+        .run(env::args().collect());
 }
 
 fn configure(_: &Context) {
