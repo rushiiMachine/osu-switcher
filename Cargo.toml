@@ -8,6 +8,7 @@ license-file = "LICENSE"
 edition = "2021"
 
 [dependencies]
+mslnk = "0.1.7"
 seahorse = "2.1"
 whoami = "1.2.1"
 rust-ini = "0.18.0"

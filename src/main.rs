@@ -1,10 +1,12 @@
-use std::{env, process};
+use std::{env, io, process};
 use std::fs::File;
+use std::io::{BufRead, Write};
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
 
 use ini::Ini;
+use mslnk::ShellLink;
 use seahorse::{App, Command, Context, Flag, FlagType};
 
 fn main() {
@@ -15,22 +17,21 @@ fn main() {
 
     let switch_cmd = Command::new("switch")
         .description("Switch to a different server account")
-        .usage("cli switch --osu <OSU_DIR> --server <SERVER_ADDRESS>")
+        .usage("osu-server-switcher.exe switch --osu <OSU_DIR> --server <SERVER_ADDRESS>")
         .flag(server_flag)
         .flag(osu_flag.clone())
         .action(switch);
 
     let configure_cmd = Command::new("configure")
         .description("Create desktop shortcuts for servers")
-        .usage("cli switch --osu <OSU_DIR>")
-        .flag(osu_flag)
+        .usage("osu-server-switcher.exe switch --osu <OSU_DIR>")
         .action(configure);
 
     App::new(env!("CARGO_PKG_NAME"))
         .description(env!("CARGO_PKG_DESCRIPTION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
-        .usage("cli <command> [...args]")
+        .usage("osu-server-switcher.exe <command> [...args]")
         .action(configure)
         .command(switch_cmd)
         .command(configure_cmd)
@@ -38,7 +39,82 @@ fn main() {
 }
 
 fn configure(_: &Context) {
-    sleep(Duration::from_secs(3))
+    println!("This executable will have to remain intact in order for the shortcuts to work!");
+    println!("Please ensure its in a permanent spot. (CTRL+C now if you need to)\n");
+
+    let username = whoami::username();
+    let stdin = io::stdin();
+    let default_osu_path = format!("C:/Users/{0}/Appdata/Local/osu!", username);
+
+    let osu_dir = if Path::new(&format!("{0}/osu!.exe", default_osu_path)).exists() {
+        println!("Detected osu! installation at {0}!", default_osu_path);
+        default_osu_path
+    } else {
+        println!("Could not detect osu installation! Please enter your osu! directory path below:");
+        let mut path = String::new();
+        for in_path in stdin.lock().lines() {
+            let in_path = in_path.unwrap();
+
+            if !Path::new(&format!("{0}/osu!.exe", in_path)).exists() {
+                println!("Invalid osu installation! (osu!.exe missing)");
+                continue;
+            }
+
+            path = in_path;
+            break;
+        }
+        path
+    };
+
+    let mut servers = Vec::from(["osu.ppy.sh".to_string()]);
+    println!("Please enter the server addresses you want to generate shortcuts for!");
+    println!("Press enter after each and again to end setup.");
+    println!("Servers: {0}", servers.join(", "));
+
+    for server in stdin.lock().lines() {
+        let server = server.unwrap();
+        if server == "" {
+            break;
+        }
+
+        if !server.contains(".") {
+            println!("Invalid server address!");
+            continue;
+        }
+
+        servers.push(server);
+        println!("Servers: {0}", servers.join(", "))
+    }
+
+    let icon_path = format!("{0}/osu!.ico", osu_dir);
+    if !Path::new(&icon_path).exists() {
+        let ico = include_bytes!("../assets/osu!.ico");
+        let mut file = File::create(&icon_path).unwrap();
+        file.write_all(ico).unwrap();
+    }
+
+    let desktop_path = format!("C:/Users/{0}/Desktop", username);
+    let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
+    for server in servers {
+        create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
+    }
+}
+
+fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String) {
+    let name = format!("osu! ({0})", server);
+    let link_path = format!("{0}/{1}.lnk", desktop_path, name);
+    let icon_path = format!("{0}/osu!.ico", osu_dir);
+    let args = format!("switch --osu \"{0}\" --server \"{1}\"", osu_dir, server);
+
+    if Path::new(&link_path).exists() {
+        std::fs::remove_file(&link_path).unwrap();
+    }
+
+    let mut link = ShellLink::new(this_exe).unwrap();
+    link.set_arguments(Some(args));
+    link.set_icon_location(Some(icon_path));
+    link.set_name(Some(name.clone()));
+    link.create_lnk(link_path).unwrap();
 }
 
 fn switch(ctx: &Context) {
