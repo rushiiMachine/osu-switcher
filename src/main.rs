@@ -203,11 +203,6 @@ fn edit_db(osu_db: &String, osu_exe: &String, server: &String, username: &String
 }
 
 fn launch_osu(osu_exe: &String, server: &String) {
-    if !Path::new(&osu_exe).exists() {
-        // TODO: windows alert
-        println!("Missing game exe! Is this even the correct directory?")
-    }
-
     let output = process::Command::new("taskkill")
         .args(&[
             "/IM",
