@@ -118,18 +118,19 @@ fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, s
 }
 
 fn switch(ctx: &Context) {
-    let osu = ctx.string_flag("osu").unwrap();
-    let server = ctx.string_flag("server").unwrap_or("<bancho>".to_string());
-    println!("Using {0} as the target osu directory!", osu);
+    let osu_dir = ctx.string_flag("osu").unwrap();
+    let server = ctx.string_flag("server")
+        .unwrap_or("osu.ppy.sh".to_string());
+    println!("Using {0} as the target osu directory!", osu_dir);
     println!("Switching to {0}!", server);
 
     let system_username = whoami::username();
     println!("Running for user {0}", system_username);
 
-    let osu_cfg = format!("{0}/osu!.{1}.cfg", osu, system_username);
-    let osu_exe = format!("{0}/osu!.exe", osu);
-    let osu_db = format!("{0}/osu!.db", osu);
-    let switcher_cfg = format!("{0}/server-account-switcher.ini", osu);
+    let osu_cfg = format!("{0}/osu!.{1}.cfg", osu_dir, system_username);
+    let osu_exe = format!("{0}/osu!.exe", osu_dir);
+    let osu_db = format!("{0}/osu!.db", osu_dir);
+    let switcher_cfg = format!("{0}/server-account-switcher.ini", osu_dir);
 
     if !Path::new(&osu_cfg).exists() || !Path::new(&osu_db).exists() {
         println!("Missing osu!.db or osu!.{0}.cfg, launching the game normally...", system_username);
@@ -150,7 +151,7 @@ fn switch(ctx: &Context) {
         let cfg = osu_ini.section(None::<String>).unwrap();
         let old_server = cfg.get("CredentialEndpoint").unwrap().to_string();
         (
-            if old_server != "" { old_server } else { "<bancho>".to_string() },
+            if old_server != "" { old_server } else { "osu.ppy.sh".to_string() },
             cfg.get("Username").unwrap().to_string(),
             cfg.get("Password").unwrap().to_string(),
         )
@@ -220,7 +221,7 @@ fn launch_osu(osu_exe: &String, server: &String) {
             "/C", "start", "",
             osu_exe,
             "-devserver",
-            if server == "<bancho>" { "" } else { server },
+            if server == "osu.ppy.sh" { "" } else { server },
         ])
         .spawn().unwrap();
 }
