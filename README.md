@@ -5,8 +5,6 @@
 - Prevent passwords being shared between servers
 - Relaunch osu! when opening with a different shortcut
 
-## THIS PROJECT IS IN WIP (NOT FUNCTIONAL)
-
 ## Usage
 
 1. Download the [latest release](https://github.com/DiamondMiner88/osu-server-switcher/releases/latest)
