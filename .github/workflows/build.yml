@@ -16,22 +16,23 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
+          default: true
           toolchain: stable
-          target: x86_64-pc-windows-msvc
-          override: true
 
-      - uses: actions/cache@v1
+      - name: Setup Rust Environment
+        run: |
+          rustup target add x86_64-pc-windows-msvc
+
+      - name: Rust caching
+        uses: actions/cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}'
-      - uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            $GITHUB_WORKSPACE/lib/rust/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('lib/rust/Cargo.lock') }}
 
       - name: Build release
         uses: actions-rs/cargo@v1
