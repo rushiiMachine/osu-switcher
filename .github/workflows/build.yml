@@ -10,18 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions-rs/toolchain@v1
+        uses: actions/checkout@v2
 
       - name: Setup toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          default: true
           toolchain: stable
-
-      - name: Setup Rust Environment
-        run: |
-          rustup target add x86_64-pc-windows-msvc
+          target: x86_64-pc-windows-msvc
+          override: true
 
       - name: Rust caching
         uses: actions/cache@v2
