@@ -9,7 +9,7 @@
 
 ## Usage
 
-1. Download the [latest release](https://github.com/DiamondMiner88/osu-server-switcher)
+1. Download the [latest release](https://github.com/DiamondMiner88/osu-server-switcher/releases/latest)
 2. Double click run to set up shortcuts for multiple servers
 3. Use the shortcuts on your desktop to launch osu!
 

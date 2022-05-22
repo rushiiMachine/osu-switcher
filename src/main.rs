@@ -47,7 +47,7 @@ fn configure(_: &Context) {
     let default_osu_path = format!("C:/Users/{0}/Appdata/Local/osu!", username);
 
     let osu_dir = if Path::new(&format!("{0}/osu!.exe", default_osu_path)).exists() {
-        println!("Detected osu! installation at {0}!", default_osu_path);
+        println!("Detected osu! installation at {0}", default_osu_path);
         default_osu_path
     } else {
         println!("Could not detect osu installation! Please enter your osu! directory path below:");
@@ -98,6 +98,8 @@ fn configure(_: &Context) {
     for server in servers {
         create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
     }
+
+    println!("Created shortcuts!")
 }
 
 fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String) {
@@ -193,8 +195,8 @@ fn edit_db(osu_db: &String, osu_exe: &String, server: &String, username: &String
     let mut db = match osu_db::Listing::from_file(&osu_db) {
         Ok(db) => db,
         Err(t) => {
-            println!("{0}", t);
             println!("Corrupted osu!.db, launching game normally...");
+            println!("DB read error: {0}", t);
             launch_osu(&osu_exe, &server);
             return;
         }
