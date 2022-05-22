@@ -28,7 +28,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ${{ env.GITHUB_WORKSPACE }}/target/
+            ${{ github.workspace }}/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('lib/rust/Cargo.lock') }}
 
       - name: Build release
@@ -38,8 +38,12 @@ jobs:
           command: build
           args: --release --target=x86_64-pc-windows-gnu
 
+      - run: |
+          echo ${{ github.workspace }}
+          tree /
+
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: osu-server-switcher
-          path: ${{ env.GITHUB_WORKSPACE }}/target/release/osu-server-switcher.exe
+          path: ${{ github.workspace }}/target/release/osu-server-switcher.exe
