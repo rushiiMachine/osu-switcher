@@ -38,12 +38,8 @@ jobs:
           command: build
           args: --release --target=x86_64-pc-windows-gnu
 
-      - run: |
-          echo ${{ github.workspace }}
-          tree /
-
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: osu-server-switcher
-          path: ${{ github.workspace }}/target/release/osu-server-switcher.exe
+          path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/osu-server-switcher.exe
