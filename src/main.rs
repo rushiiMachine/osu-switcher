@@ -1,6 +1,6 @@
 use std::{env, io, process};
 use std::fs::File;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
@@ -99,7 +99,8 @@ fn configure(_: &Context) {
         create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
     }
 
-    println!("Created shortcuts!")
+    println!("Created shortcuts! Press enter to exit...");
+    stdin.lock().bytes().next();
 }
 
 fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String) {
