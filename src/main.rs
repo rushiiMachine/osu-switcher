@@ -110,18 +110,23 @@ fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, s
     let args = format!("switch --osu \"{0}\" --server \"{1}\"", osu_dir, server);
 
     if Path::new(&link_path).exists() {
-        std::fs::remove_file(&link_path).unwrap();
+        std::fs::remove_file(&link_path)
+            .expect("Failed to delete old shortcut")
     }
 
-    let mut link = ShellLink::new(this_exe).unwrap();
+    let mut link = ShellLink::new(this_exe)
+        .expect("Failed to initialize a shortcut");
     link.set_arguments(Some(args));
     link.set_icon_location(Some(icon_path));
     link.set_name(Some(name.clone()));
-    link.create_lnk(link_path).unwrap();
+
+    link.create_lnk(link_path)
+        .expect("Failed to create shortcut")
 }
 
 fn switch(ctx: &Context) {
-    let osu_dir = ctx.string_flag("osu").unwrap();
+    let osu_dir = ctx.string_flag("osu")
+        .expect("The --osu flag is required in order to start osu");
     let server = ctx.string_flag("server")
         .unwrap_or("osu.ppy.sh".to_string());
     println!("Using {0} as the target osu directory!", osu_dir);
@@ -142,21 +147,30 @@ fn switch(ctx: &Context) {
     }
 
     if !Path::new(&switcher_cfg).exists() {
-        File::create(&switcher_cfg).unwrap();
+        File::create(&switcher_cfg)
+            .expect("Failed to create switcher config");
     }
-    let mut switcher_ini = Ini::load_from_file(&switcher_cfg).unwrap();
-    let mut osu_ini = Ini::load_from_file(&osu_cfg).unwrap();
+
+    let mut switcher_ini = Ini::load_from_file(&switcher_cfg)
+        .expect("Failed to read switcher config");
+    let mut osu_ini = Ini::load_from_file(&osu_cfg)
+        .expect(&format!("Failed to read osu!.{}.cfg config", system_username));
 
     // rust trickery
     // .section() returns an immutable reference,
     // as long as its in scope I cannot borrow as a mutable reference using .with_section later
     let (old_server, current_username, current_password) = {
-        let cfg = osu_ini.section(None::<String>).unwrap();
-        let old_server = cfg.get("CredentialEndpoint").unwrap().to_string();
+        let cfg = osu_ini.section(None::<String>)
+            .expect("Corrupted osu user config");
+
+        let old_server = cfg.get("CredentialEndpoint")
+            .unwrap_or("")
+            .to_string();
+
         (
             if old_server != "" { old_server } else { "osu.ppy.sh".to_string() },
-            cfg.get("Username").unwrap().to_string(),
-            cfg.get("Password").unwrap().to_string(),
+            cfg.get("Username").unwrap_or("").to_string(),
+            cfg.get("Password").unwrap_or("").to_string(),
         )
     };
 
@@ -168,15 +182,15 @@ fn switch(ctx: &Context) {
                     .set("Password", "");
             }
             Some(section) => {
-                let new_username = section.get("Username").unwrap();
-                let new_password = section.get("Password").unwrap();
+                let new_username = section.get("Username").unwrap_or("");
+                let new_password = section.get("Password").unwrap_or("");
 
                 osu_ini.with_section(None::<String>)
                     .set("Username", new_username)
                     .set("Password", new_password)
                     .set("CredentialEndpoint", &server);
 
-                edit_db(&osu_db, &osu_exe, &server, &new_username.to_string());
+                edit_db(&osu_db, &new_username.to_string());
             }
         }
 
@@ -185,25 +199,21 @@ fn switch(ctx: &Context) {
             .set("Username", current_username)
             .set("Password", current_password);
 
-        osu_ini.write_to_file(&osu_cfg).unwrap();
-        switcher_ini.write_to_file(&switcher_cfg).unwrap();
+        osu_ini.write_to_file(&osu_cfg)
+            .expect("Failed to save osu user config");
+        switcher_ini.write_to_file(&switcher_cfg)
+            .expect("Failed to save switcher config");
     }
 
     launch_osu(&osu_exe, &server);
 }
 
-fn edit_db(osu_db: &String, osu_exe: &String, server: &String, username: &String) {
-    let mut db = match osu_db::Listing::from_file(&osu_db) {
-        Ok(db) => db,
-        Err(t) => {
-            println!("Corrupted osu!.db, launching game normally...");
-            println!("DB read error: {0}", t);
-            launch_osu(&osu_exe, &server);
-            return;
-        }
-    };
+fn edit_db(osu_db: &String, username: &String) {
+    let mut db = osu_db::Listing::from_file(&osu_db)
+        .expect("Failed to open osu!.db");
     db.player_name = Some(username.to_owned());
-    db.save(&osu_db).unwrap();
+    db.save(&osu_db)
+        .expect("Failed to save osu!.db");
 }
 
 fn launch_osu(osu_exe: &String, server: &String) {
@@ -212,19 +222,21 @@ fn launch_osu(osu_exe: &String, server: &String) {
             "/IM",
             "osu!.exe"
         ])
-        .output().unwrap();
+        .output()
+        .expect("Failed to kill osu");
 
     if output.stdout.starts_with("SUCCESS".as_bytes()) {
         println!("Killed running osu!.exe, restarting...");
         sleep(Duration::from_secs(1));
     }
 
+    let server = if server == "osu.ppy.sh" { "" } else { server };
     process::Command::new("cmd")
         .args(&[
-            "/C", "start", "",
-            osu_exe,
-            "-devserver",
-            if server == "osu.ppy.sh" { "" } else { server },
+            "/C",
+            "start", osu_exe,
+            "-devserver", server,
         ])
-        .spawn().unwrap();
+        .spawn()
+        .expect("Failed to start osu");
 }
