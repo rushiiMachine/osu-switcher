@@ -1,4 +1,4 @@
-use std::{env, io, process};
+use std::{env, io, panic, process};
 use std::fs::File;
 use std::io::{BufRead, Read, Write};
 use std::path::Path;
@@ -27,15 +27,23 @@ fn main() {
         .usage("osu-server-switcher.exe switch --osu <OSU_DIR>")
         .action(configure);
 
-    App::new(env!("CARGO_PKG_NAME"))
+    let app = App::new(env!("CARGO_PKG_NAME"))
         .description(env!("CARGO_PKG_DESCRIPTION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
         .usage("osu-server-switcher.exe <command> [...args]")
         .action(configure)
         .command(switch_cmd)
-        .command(configure_cmd)
-        .run(env::args().collect());
+        .command(configure_cmd);
+
+    let app_result = panic::catch_unwind(|| {
+        app.run(env::args().collect())
+    });
+
+    if app_result.is_err() {
+        println!("\nPress enter to exit...");
+        io::stdin().lock().bytes().next();
+    };
 }
 
 fn configure(_: &Context) {
