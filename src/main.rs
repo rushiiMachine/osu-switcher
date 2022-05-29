@@ -1,4 +1,5 @@
-use std::{env, io, panic, process};
+use std::{env, fs, io, panic, process};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, Read, Write};
 use std::path::Path;
@@ -93,33 +94,45 @@ fn configure(_: &Context) {
         println!("\nServers: {0}", servers.join(", "))
     }
 
-    let icon_path = format!("{0}/osu!.ico", osu_dir);
-    if !Path::new(&icon_path).exists() {
-        let ico = include_bytes!("../assets/osu!.ico");
-        let mut file = File::create(&icon_path).unwrap();
-        file.write_all(ico).unwrap();
-    }
+    let icons: HashMap<&str, &[u8]> = HashMap::from([
+        ("osu.ppy.sh.ico", include_bytes!("../assets/osu.ppy.sh.ico").as_slice()),
+        ("akatsuki.pw.ico", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
+        ("kurikku.pw.ico", include_bytes!("../assets/kurikku.pw.ico").as_slice()),
+        ("ez-pp.farm.ico", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
+        ("lemres.de.ico", include_bytes!("../assets/lemres.de.ico").as_slice()),
+        ("kawata.pw.ico", include_bytes!("../assets/kawata.pw.ico").as_slice()),
+        ("gatari.pw.ico", include_bytes!("../assets/gatari.pw.ico").as_slice()),
+        ("ussr.pl.ico", include_bytes!("../assets/ussr.pl.ico").as_slice()),
+        ("ripple.moe.ico", include_bytes!("../assets/ripple.moe.ico").as_slice()),
+    ]);
+
+    setup_icons(&osu_dir, &icons);
 
     let desktop_path = format!("C:/Users/{0}/Desktop", username);
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
-        create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
+        create_shortcut(&desktop_path, &osu_dir, &this_exe, &server, &icons);
     }
 
     println!("Created shortcuts! Press enter to exit...");
     stdin.lock().bytes().next();
 }
 
-fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String) {
+fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String, icons: &HashMap<&str, &[u8]>) {
     let name = format!("osu! ({0})", server);
     let link_path = format!("{0}/{1}.lnk", desktop_path, name);
-    let icon_path = format!("{0}/osu!.ico", osu_dir);
     let args = format!("switch --osu \"{0}\" --server \"{1}\"", osu_dir, server);
 
     if Path::new(&link_path).exists() {
-        std::fs::remove_file(&link_path)
+        fs::remove_file(&link_path)
             .expect("Failed to delete old shortcut")
     }
+
+    let icon_path = if icons.contains_key(&*format!("{0}.ico", server)) {
+        format!("{0}/icons/{1}.ico", osu_dir, server)
+    } else {
+        format!("{0}/icons/osu.ppy.sh.ico", osu_dir)
+    };
 
     let mut link = ShellLink::new(this_exe)
         .expect("Failed to initialize a shortcut");
@@ -246,4 +259,34 @@ fn launch_osu(osu_exe: &String, server: &String) {
         ])
         .spawn()
         .expect("Failed to start osu");
+}
+
+fn setup_icons(osu_dir: &String, icons: &HashMap<&str, &[u8]>) {
+    let icons_path = format!("{}/icons", osu_dir);
+    let icons_path = Path::new(&icons_path);
+
+    let files: Vec<String> = if icons_path.exists() {
+        fs::read_dir(osu_dir)
+            .unwrap()
+            .filter(|d| d.is_ok())
+            .map(|d| d.unwrap().file_name().into_string().unwrap())
+            .collect()
+    } else {
+        fs::create_dir(icons_path)
+            .expect("Failed to create icons dir");
+        vec![]
+    };
+
+    for (icon, bytes) in icons {
+        if files.is_empty() || !files.contains(&icon.to_string()) {
+            let path = format!("{0}/icons/{1}", osu_dir, icon);
+            let path = Path::new(&path);
+
+            let mut file = File::create(path)
+                .expect("Failed to create icon");
+
+            file.write_all(bytes)
+                .expect("Failed to write icon");
+        }
+    }
 }

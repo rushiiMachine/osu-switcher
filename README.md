@@ -1,6 +1,6 @@
 # osu-switcher ![views](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FDiamondMiner88%2Fosu-server-switcher&count_bg=%2379C83D&title_bg=%23555555&icon=github.svg&icon_color=%23E7E7E7&title=views&edge_flat=true)
 
-- Switch between servers seamlessly with desktop shortcuts
+- Switch between servers seamlessly with desktop shortcuts (with custom icons)
 - Switch accounts when switching servers (not multiaccounting)
 - Prevent passwords being shared between servers
 - Quickly relaunch osu! when opening with a different shortcut
