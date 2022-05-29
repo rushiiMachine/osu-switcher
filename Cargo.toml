@@ -1,7 +1,7 @@
 [package]
-name = "osu-server-switcher"
+name = "osu-switcher"
 version = "1.0.0"
-description = "A tool for automatically switching logins when changing osu servers"
+description = "A tool for automatically switching server (+accounts)"
 repository = "https://github.com/DiamondMiner88/osu-server-account-switcher"
 authors = ["Diamond (https://github.com/DiamondMiner88)"]
 license-file = "LICENSE"

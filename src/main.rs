@@ -17,21 +17,21 @@ fn main() {
 
     let switch_cmd = Command::new("switch")
         .description("Switch to a different server account")
-        .usage("osu-server-switcher.exe switch --osu <OSU_DIR> --server <SERVER_ADDRESS>")
+        .usage("osu-switcher.exe switch --osu <OSU_DIR> --server <SERVER_ADDRESS>")
         .flag(server_flag)
         .flag(osu_flag.clone())
         .action(switch);
 
     let configure_cmd = Command::new("configure")
         .description("Create desktop shortcuts for servers")
-        .usage("osu-server-switcher.exe switch --osu <OSU_DIR>")
+        .usage("osu-switcher.exe switch --osu <OSU_DIR>")
         .action(configure);
 
     let app = App::new(env!("CARGO_PKG_NAME"))
         .description(env!("CARGO_PKG_DESCRIPTION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
-        .usage("osu-server-switcher.exe <command> [...args]")
+        .usage("osu-switcher.exe <command> [...args]")
         .action(configure)
         .command(switch_cmd)
         .command(configure_cmd);

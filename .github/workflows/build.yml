@@ -41,5 +41,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: osu-server-switcher
-          path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/osu-server-switcher.exe
+          name: osu-switcher
+          path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/osu-switcher.exe
