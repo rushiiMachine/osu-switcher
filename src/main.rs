@@ -48,7 +48,7 @@ fn main() {
 
 fn configure(_: &Context) {
     println!("This executable will have to remain intact in order for the shortcuts to work!");
-    println!("Please ensure its in a permanent spot. (CTRL+C now if you need to)\n");
+    println!("Please ensure its in a permanent spot. (exit now if you need to)\n");
 
     let username = whoami::username();
     let stdin = io::stdin();
@@ -75,8 +75,7 @@ fn configure(_: &Context) {
     };
 
     let mut servers = Vec::from(["osu.ppy.sh".to_string()]);
-    println!("Please enter the server addresses you want to generate shortcuts for!");
-    println!("Press enter after each and again to end setup.");
+    println!("\nPlease enter the server addresses you want to generate shortcuts for! Press enter after each or to finish.");
     println!("Servers: {0}", servers.join(", "));
 
     for server in stdin.lock().lines() {
@@ -91,7 +90,7 @@ fn configure(_: &Context) {
         }
 
         servers.push(server);
-        println!("Servers: {0}", servers.join(", "))
+        println!("\nServers: {0}", servers.join(", "))
     }
 
     let icon_path = format!("{0}/osu!.ico", osu_dir);
