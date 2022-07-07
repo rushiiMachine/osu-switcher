@@ -204,11 +204,12 @@ fn switch(ctx: &Context) {
             Some(section) => {
                 let new_username = section.get("Username").unwrap_or("");
                 let new_password = section.get("Password").unwrap_or("");
+                let new_server = if server == "osu.ppy.sh" { "" } else { &server };
 
                 osu_ini.with_section(None::<String>)
                     .set("Username", new_username)
                     .set("Password", new_password)
-                    .set("CredentialEndpoint", &server);
+                    .set("CredentialEndpoint", new_server);
 
                 edit_db(&osu_db, &new_username.to_string());
             }
