@@ -53,10 +53,10 @@ fn configure(_: &Context) {
 
     let username = whoami::username();
     let stdin = io::stdin();
-    let default_osu_path = format!("C:/Users/{0}/Appdata/Local/osu!", username);
+    let default_osu_path = format!("C:/Users/{username}/Appdata/Local/osu!");
 
-    let osu_dir = if Path::new(&format!("{0}/osu!.exe", default_osu_path)).exists() {
-        println!("Detected osu! installation at {0}", default_osu_path);
+    let osu_dir = if Path::new(&format!("{default_osu_path}/osu!.exe")).exists() {
+        println!("Detected osu! installation at {default_osu_path}");
         default_osu_path
     } else {
         println!("Could not detect osu installation! Please enter your osu! directory path below:");
@@ -64,7 +64,7 @@ fn configure(_: &Context) {
         for in_path in stdin.lock().lines() {
             let in_path = in_path.unwrap();
 
-            if !Path::new(&format!("{0}/osu!.exe", in_path)).exists() {
+            if !Path::new(&format!("{in_path}/osu!.exe")).exists() {
                 println!("Invalid osu installation! (osu!.exe missing)");
                 continue;
             }
@@ -108,7 +108,7 @@ fn configure(_: &Context) {
 
     setup_icons(&osu_dir, &icons);
 
-    let desktop_path = format!("C:/Users/{0}/Desktop", username);
+    let desktop_path = format!("C:/Users/{username}/Desktop");
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
         create_shortcut(&desktop_path, &osu_dir, &this_exe, &server, &icons);
@@ -119,19 +119,19 @@ fn configure(_: &Context) {
 }
 
 fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String, icons: &HashMap<&str, &[u8]>) {
-    let name = format!("osu! ({0})", server);
-    let link_path = format!("{0}/{1}.lnk", desktop_path, name);
-    let args = format!("switch --osu \"{0}\" --server \"{1}\"", osu_dir, server);
+    let name = format!("osu! ({server})");
+    let link_path = format!("{desktop_path}/{name}.lnk");
+    let args = format!("switch --osu \"{osu_dir}\" --server \"{server}\"");
 
     if Path::new(&link_path).exists() {
         fs::remove_file(&link_path)
             .expect("Failed to delete old shortcut")
     }
 
-    let icon_path = if icons.contains_key(&*format!("{0}.ico", server)) {
-        format!("{0}/icons/{1}.ico", osu_dir, server)
+    let icon_path = if icons.contains_key(&*format!("{server}.ico")) {
+        format!("{osu_dir}/icons/{server}.ico")
     } else {
-        format!("{0}/icons/osu.ppy.sh.ico", osu_dir)
+        format!("{osu_dir}/icons/osu.ppy.sh.ico")
     };
 
     let mut link = ShellLink::new(this_exe)
@@ -149,19 +149,19 @@ fn switch(ctx: &Context) {
         .expect("The --osu flag is required in order to start osu");
     let server = ctx.string_flag("server")
         .unwrap_or("osu.ppy.sh".to_string());
-    println!("Using {0} as the target osu directory!", osu_dir);
-    println!("Switching to {0}!", server);
+    println!("Using {osu_dir} as the target osu directory!");
+    println!("Switching to {server}!");
 
     let system_username = whoami::username();
-    println!("Running for user {0}", system_username);
+    println!("Running for user {system_username}");
 
-    let osu_cfg = format!("{0}/osu!.{1}.cfg", osu_dir, system_username);
-    let osu_exe = format!("{0}/osu!.exe", osu_dir);
-    let osu_db = format!("{0}/osu!.db", osu_dir);
-    let switcher_cfg = format!("{0}/server-account-switcher.ini", osu_dir);
+    let osu_cfg = format!("{osu_dir}/osu!.{system_username}.cfg");
+    let osu_exe = format!("{osu_dir}/osu!.exe");
+    let osu_db = format!("{osu_dir}/osu!.db");
+    let switcher_cfg = format!("{osu_dir}/server-account-switcher.ini");
 
     if !Path::new(&osu_cfg).exists() || !Path::new(&osu_db).exists() {
-        println!("Missing osu!.db or osu!.{0}.cfg, launching the game normally...", system_username);
+        println!("Missing osu!.db or osu!.{system_username}.cfg, launching the game normally...");
         launch_osu(&osu_exe, &server);
         return;
     }
@@ -174,7 +174,7 @@ fn switch(ctx: &Context) {
     let mut switcher_ini = Ini::load_from_file(&switcher_cfg)
         .expect("Failed to read switcher config");
     let mut osu_ini = Ini::load_from_file(&osu_cfg)
-        .expect(&format!("Failed to read osu!.{}.cfg config", system_username));
+        .expect(&format!("Failed to read osu!.{system_username}.cfg"));
 
     // rust trickery
     // .section() returns an immutable reference,
@@ -263,7 +263,7 @@ fn launch_osu(osu_exe: &String, server: &String) {
 }
 
 fn setup_icons(osu_dir: &String, icons: &HashMap<&str, &[u8]>) {
-    let icons_path = format!("{}/icons", osu_dir);
+    let icons_path = format!("{osu_dir}/icons");
     let icons_path = Path::new(&icons_path);
 
     let files: Vec<String> = if icons_path.exists() {
@@ -280,7 +280,7 @@ fn setup_icons(osu_dir: &String, icons: &HashMap<&str, &[u8]>) {
 
     for (icon, bytes) in icons {
         if files.is_empty() || !files.contains(&icon.to_string()) {
-            let path = format!("{0}/icons/{1}", osu_dir, icon);
+            let path = format!("{osu_dir}/icons/{icon}");
             let path = Path::new(&path);
 
             let mut file = File::create(path)
