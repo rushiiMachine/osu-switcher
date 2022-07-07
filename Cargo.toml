@@ -2,7 +2,7 @@
 name = "osu-switcher"
 version = "1.1.0"
 description = "A tool for automatically switching server (+accounts)"
-repository = "https://github.com/DiamondMiner88/osu-server-account-switcher"
+repository = "https://github.com/DiamondMiner88/osu-switcher"
 authors = ["Diamond (https://github.com/DiamondMiner88)"]
 license-file = "LICENSE"
 edition = "2021"

@@ -38,11 +38,13 @@ fn main() {
         .command(configure_cmd);
 
     let app_result = panic::catch_unwind(|| {
+        env::set_var("RUST_BACKTRACE", "1");
         app.run(env::args().collect())
     });
 
     if app_result.is_err() {
-        println!("\nPress enter to exit...");
+        println!("\nAn error has occurred! Please create an issue on this project's Github with the log! ({0}/issues)", env!("CARGO_PKG_REPOSITORY"));
+        println!("Press enter to exit...");
         io::stdin().lock().bytes().next();
     };
 }
