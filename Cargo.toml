@@ -12,4 +12,5 @@ mslnk = "0.1.7"
 seahorse = "2.1"
 whoami = "1.2.1"
 rust-ini = "0.18.0"
+lazy_static = "1.4.0"
 osu-db = { version = "0.3.0", default-features = false }

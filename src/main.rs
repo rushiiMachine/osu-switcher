@@ -1,14 +1,13 @@
-use std::{env, fs, io, panic, process};
-use std::collections::HashMap;
+use std::{env, io, panic};
 use std::fs::File;
-use std::io::{BufRead, Read, Write};
+use std::io::{BufRead, Read};
 use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
 
 use ini::Ini;
-use mslnk::ShellLink;
 use seahorse::{App, Command, Context, Flag, FlagType};
+
+mod shortcuts;
+mod osu_util;
 
 fn main() {
     let osu_flag = Flag::new("osu", FlagType::String)
@@ -96,54 +95,16 @@ fn configure(_: &Context) {
         println!("\nServers: {0}", servers.join(", "))
     }
 
-    let icons: HashMap<&str, &[u8]> = HashMap::from([
-        ("osu.ppy.sh.ico", include_bytes!("../assets/osu.ppy.sh.ico").as_slice()),
-        ("akatsuki.pw.ico", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
-        ("kurikku.pw.ico", include_bytes!("../assets/kurikku.pw.ico").as_slice()),
-        ("ez-pp.farm.ico", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
-        ("lemres.de.ico", include_bytes!("../assets/lemres.de.ico").as_slice()),
-        ("kawata.pw.ico", include_bytes!("../assets/kawata.pw.ico").as_slice()),
-        ("gatari.pw.ico", include_bytes!("../assets/gatari.pw.ico").as_slice()),
-        ("ussr.pl.ico", include_bytes!("../assets/ussr.pl.ico").as_slice()),
-        ("ripple.moe.ico", include_bytes!("../assets/ripple.moe.ico").as_slice()),
-    ]);
-
-    setup_icons(&osu_dir, &icons);
+    shortcuts::setup_icons(&osu_dir);
 
     let desktop_path = format!("C:/Users/{username}/Desktop");
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
-        create_shortcut(&desktop_path, &osu_dir, &this_exe, &server, &icons);
+        shortcuts::create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
     }
 
     println!("Created shortcuts! Press enter to exit...");
     stdin.lock().bytes().next();
-}
-
-fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String, icons: &HashMap<&str, &[u8]>) {
-    let name = format!("osu! ({server})");
-    let link_path = format!("{desktop_path}/{name}.lnk");
-    let args = format!("switch --osu \"{osu_dir}\" --server \"{server}\"");
-
-    if Path::new(&link_path).exists() {
-        fs::remove_file(&link_path)
-            .expect("Failed to delete old shortcut")
-    }
-
-    let icon_path = if icons.contains_key(&*format!("{server}.ico")) {
-        format!("{osu_dir}/icons/{server}.ico")
-    } else {
-        format!("{osu_dir}/icons/osu.ppy.sh.ico")
-    };
-
-    let mut link = ShellLink::new(this_exe)
-        .expect("Failed to initialize a shortcut");
-    link.set_arguments(Some(args));
-    link.set_icon_location(Some(icon_path));
-    link.set_name(Some(name.clone()));
-
-    link.create_lnk(link_path)
-        .expect("Failed to create shortcut")
 }
 
 fn switch(ctx: &Context) {
@@ -164,7 +125,7 @@ fn switch(ctx: &Context) {
 
     if !Path::new(&osu_cfg).exists() || !Path::new(&osu_db).exists() {
         println!("Missing osu!.db or osu!.{system_username}.cfg, launching the game normally...");
-        launch_osu(&osu_exe, &server);
+        osu_util::restart_osu(&osu_exe, &server);
         return;
     }
 
@@ -213,7 +174,7 @@ fn switch(ctx: &Context) {
                     .set("Password", new_password)
                     .set("CredentialEndpoint", new_server);
 
-                edit_db(&osu_db, &new_username.to_string());
+                osu_util::edit_db(&osu_db, &new_username.to_string());
             }
         }
 
@@ -228,68 +189,5 @@ fn switch(ctx: &Context) {
             .expect("Failed to save switcher config");
     }
 
-    launch_osu(&osu_exe, &server);
-}
-
-fn edit_db(osu_db: &String, username: &String) {
-    let mut db = osu_db::Listing::from_file(&osu_db)
-        .expect("Failed to open osu!.db");
-    db.player_name = Some(username.to_owned());
-    db.save(&osu_db)
-        .expect("Failed to save osu!.db");
-}
-
-fn launch_osu(osu_exe: &String, server: &String) {
-    let output = process::Command::new("taskkill")
-        .args(&[
-            "/IM",
-            "osu!.exe"
-        ])
-        .output()
-        .expect("Failed to kill osu");
-
-    if output.stdout.starts_with("SUCCESS".as_bytes()) {
-        println!("Killed running osu!.exe, restarting...");
-        sleep(Duration::from_secs(1));
-    }
-
-    let server = if server == "osu.ppy.sh" { "" } else { server };
-    process::Command::new("cmd")
-        .args(&[
-            "/C",
-            "start", osu_exe,
-            "-devserver", server,
-        ])
-        .spawn()
-        .expect("Failed to start osu");
-}
-
-fn setup_icons(osu_dir: &String, icons: &HashMap<&str, &[u8]>) {
-    let icons_path = format!("{osu_dir}/icons");
-    let icons_path = Path::new(&icons_path);
-
-    let files: Vec<String> = if icons_path.exists() {
-        fs::read_dir(osu_dir)
-            .unwrap()
-            .filter(|d| d.is_ok())
-            .map(|d| d.unwrap().file_name().into_string().unwrap())
-            .collect()
-    } else {
-        fs::create_dir(icons_path)
-            .expect("Failed to create icons dir");
-        vec![]
-    };
-
-    for (icon, bytes) in icons {
-        if files.is_empty() || !files.contains(&icon.to_string()) {
-            let path = format!("{osu_dir}/icons/{icon}");
-            let path = Path::new(&path);
-
-            let mut file = File::create(path)
-                .expect("Failed to create icon");
-
-            file.write_all(bytes)
-                .expect("Failed to write icon");
-        }
-    }
+    osu_util::restart_osu(&osu_exe, &server);
 }
