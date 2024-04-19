@@ -1,6 +1,4 @@
 use std::process;
-use std::thread::sleep;
-use std::time::Duration;
 
 pub fn edit_db(osu_db: &String, username: &String) {
     let mut db = osu_db::Listing::from_file(&osu_db)
@@ -11,17 +9,15 @@ pub fn edit_db(osu_db: &String, username: &String) {
 }
 
 pub fn restart_osu(osu_exe: &String, server: &String) {
-    let output = process::Command::new("taskkill")
-        .args(&[
-            "/IM",
-            "osu!.exe"
-        ])
-        .output()
-        .expect("Failed to kill osu");
+    let powershell_cmd: &str = "\
+        $p = Get-Process -Name osu! -ErrorAction SilentlyContinue; \
+        if (!$p) { Exit 0; }; \
+        Stop-Process -Force -InputObject $p -ErrorAction Stop; \
+        Wait-Process -InputObject $p";
 
-    if output.stdout.starts_with("SUCCESS".as_bytes()) {
-        println!("Killed running osu!.exe, restarting...");
-        sleep(Duration::from_secs(1));
+    match powershell_script::run(powershell_cmd) {
+        Err(e) => panic!("Failed to kill osu!:\n{e}"),
+        _ => println!("Killed running osu!.exe, restarting..."),
     }
 
     let server = if server == "osu.ppy.sh" { "" } else { server };
