@@ -34,3 +34,16 @@ pub fn restart_osu(osu_exe: &String, server: &String) {
         .spawn()
         .expect("Failed to start osu");
 }
+
+/// Clear miscellaneous files that might be an issue when relaunching
+pub fn clear_misc(osu_dir: &str) {
+    // If this is present, it causes osu! to relaunch and repair itself, which doesn't preserve -devserver
+    let force_update_file = format!("{osu_dir}/.require_update");
+
+    // I have no clue what this contains, but I have heard about this potentially containing anti-multi-accounting
+    // data, which might interfere with switching accounts across servers. Just to be safe, wipe it regardless.
+    let osu_auth_logs = format!("{osu_dir}/Logs/osu!auth.log");
+
+    let _ = std::fs::remove_file(force_update_file.as_str());
+    let _ = std::fs::remove_file(osu_auth_logs.as_str());
+}

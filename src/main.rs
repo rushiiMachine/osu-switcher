@@ -189,5 +189,6 @@ fn switch(ctx: &Context) {
             .expect("Failed to save switcher config");
     }
 
+    osu_util::clear_misc(&*osu_dir);
     osu_util::restart_osu(&osu_exe, &server);
 }
