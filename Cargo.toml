@@ -2,15 +2,15 @@
 name = "osu-switcher"
 version = "1.1.1"
 description = "A tool for automatically switching server (+accounts)"
-repository = "https://github.com/DiamondMiner88/osu-switcher"
-authors = ["Diamond (https://github.com/DiamondMiner88)"]
+repository = "https://github.com/rushiiMachine/osu-switcher"
+authors = ["rushiiMachine (https://github.com/rushiiMachine)"]
 license-file = "LICENSE"
 edition = "2021"
 
 [dependencies]
-mslnk = "0.1.7"
-seahorse = "2.1"
-whoami = "1.2.1"
-rust-ini = "0.18.0"
+mslnk = "0.1.8"
+seahorse = "2.2.0"
+whoami = "1.5.1"
+rust-ini = "0.21.0"
 lazy_static = "1.4.0"
 osu-db = { version = "0.3.0", default-features = false }
