@@ -1,7 +1,7 @@
-use std::{env, io, panic};
 use std::fs::File;
 use std::io::{BufRead, Read};
 use std::path::Path;
+use std::{env, io, panic};
 
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};

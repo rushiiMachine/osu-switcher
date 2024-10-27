@@ -12,6 +12,5 @@ mslnk = "0.1.8"
 seahorse = "2.2.0"
 whoami = "1.5.1"
 rust-ini = "0.21.0"
-lazy_static = "1.4.0"
 powershell_script = "1.1.0"
 osu-db = { version = "0.3.0", default-features = false }

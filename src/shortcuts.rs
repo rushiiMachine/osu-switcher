@@ -1,25 +1,22 @@
+use mslnk::ShellLink;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::sync::LazyLock;
 
-use lazy_static::lazy_static;
-use mslnk::ShellLink;
-
-lazy_static! {
-    pub static ref ICONS: HashMap<&'static str, &'static [u8]> = HashMap::from([
-        ("osu.ppy.sh.ico", include_bytes!("../assets/osu.ppy.sh.ico").as_slice()),
-        ("akatsuki.pw.ico", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
-        ("kurikku.pw.ico", include_bytes!("../assets/kurikku.pw.ico").as_slice()),
-        ("ez-pp.farm.ico", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
-        ("lemres.de.ico", include_bytes!("../assets/lemres.de.ico").as_slice()),
-        ("kawata.pw.ico", include_bytes!("../assets/kawata.pw.ico").as_slice()),
-        ("gatari.pw.ico", include_bytes!("../assets/gatari.pw.ico").as_slice()),
-        ("ussr.pl.ico", include_bytes!("../assets/ussr.pl.ico").as_slice()),
-        ("ripple.moe.ico", include_bytes!("../assets/ripple.moe.ico").as_slice()),
-    ]);
-}
+static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
+    ("osu.ppy.sh.ico", include_bytes!("../assets/osu.ppy.sh.ico").as_slice()),
+    ("akatsuki.pw.ico", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
+    ("kurikku.pw.ico", include_bytes!("../assets/kurikku.pw.ico").as_slice()),
+    ("ez-pp.farm.ico", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
+    ("lemres.de.ico", include_bytes!("../assets/lemres.de.ico").as_slice()),
+    ("kawata.pw.ico", include_bytes!("../assets/kawata.pw.ico").as_slice()),
+    ("gatari.pw.ico", include_bytes!("../assets/gatari.pw.ico").as_slice()),
+    ("ussr.pl.ico", include_bytes!("../assets/ussr.pl.ico").as_slice()),
+    ("ripple.moe.ico", include_bytes!("../assets/ripple.moe.ico").as_slice()),
+]));
 
 pub fn setup_icons(osu_dir: &String) {
     let icons_path = format!("{osu_dir}/icons");
