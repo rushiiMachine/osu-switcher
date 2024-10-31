@@ -1,3 +1,5 @@
+name: Build
+
 on:
   push:
     branches:
@@ -7,21 +9,21 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-pc-windows-gnu
-          override: true
+        run: |
+          rustup toolchain add --profile=minimal stable
+          rustup target add x86_64-pc-windows-msvc
+          rustup target add i686-pc-windows-msvc
 
       - name: Rust caching
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -29,17 +31,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ${{ github.workspace }}/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('lib/rust/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
-      - name: Build release
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --release --target=x86_64-pc-windows-gnu
+      - name: Build
+        run: |
+          cargo build --target=x86_64-pc-windows-msvc
+          cargo build --target=i686-pc-windows-msvc
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: osu-switcher
-          path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/osu-switcher.exe
+          path: ${{ github.workspace }}/target/**/osu-switcher.exe
