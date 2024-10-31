@@ -8,6 +8,7 @@ use seahorse::{App, Command, Context, Flag, FlagType};
 
 mod shortcuts;
 mod osu_util;
+mod icons;
 
 fn main() {
     let osu_flag = Flag::new("osu", FlagType::String)
@@ -93,8 +94,6 @@ fn configure(_: &Context) {
         servers.push(server);
         println!("\nServers: {0}", servers.join(", "))
     }
-
-    shortcuts::setup_icons(&osu_dir);
 
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
