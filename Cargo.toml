@@ -8,6 +8,12 @@ license-file = "LICENSE"
 edition = "2021"
 publish = false
 
+[profile.release]
+strip = "debuginfo"
+opt-level = "s"
+lto = true
+codegen-units = 1
+
 [dependencies]
 mslnk = "0.1.8"
 seahorse = "2.2.0"
