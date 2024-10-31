@@ -3,8 +3,7 @@
 - Switch between servers seamlessly with desktop shortcuts (with custom icons)
 - Switch accounts when switching servers (not multiaccounting)
 - Prevent passwords being shared between servers
-- Quickly relaunch osu! when opening with a different shortcut
-- Auto-launch 3rd party server patchers (like the [akatsuki patcher](https://akatsuki.pw/patcher)) (**WIP**)
+- Quickly relaunch osu!stable when opening with a different shortcut
 
 ## Usage
 
@@ -12,16 +11,14 @@
 2. Double click run to set up shortcuts for multiple servers
 3. Use the shortcuts on your desktop to launch osu!
 
-## Drawbacks
+## Additional Info
 
-- I will not sign my release binaries, so cope with Windows SmartScreen.
-- Due to a bug you may have to sign-in **twice** before switching again to save your credentials. I cannot do anything
-  about it.
-- You cannot delete the executable after you've created the shortcuts.
-- Shortcuts will have to be recreated if you've moved the location of:
-    - osu! install directory
-    - osu-switcher.exe
-    - 3rd party patchers (soon)
+- I don't sign my releases, Windows SmartScreen may appear on first launch.
+- Due to an osu!stable bug you need to sign-in **twice** across different launches before your credentials for a
+  specific server can be saved.
+- Shortcuts will have to be recreated if you've moved the location of the following:
+    - `osu!` install directory
+    - `osu-switcher.exe`
 
 ## Disclaimer
 
