@@ -52,13 +52,12 @@ fn configure(_: &Context) {
     println!("This executable will have to remain intact in order for the shortcuts to work!");
     println!("Please ensure its in a permanent spot. (exit now if you need to)\n");
 
-    let username = whoami::username();
     let stdin = io::stdin();
-    let default_osu_path = format!("C:/Users/{username}/Appdata/Local/osu!");
+    let default_osu_path = "%appdata%/Local/osu!";
 
     let osu_dir = if Path::new(&format!("{default_osu_path}/osu!.exe")).exists() {
         println!("Detected osu! installation at {default_osu_path}");
-        default_osu_path
+        default_osu_path.to_string()
     } else {
         println!("Could not detect osu installation! Please enter your osu! directory path below:");
         let mut path = String::new();
@@ -97,10 +96,9 @@ fn configure(_: &Context) {
 
     shortcuts::setup_icons(&osu_dir);
 
-    let desktop_path = format!("C:/Users/{username}/Desktop");
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
-        shortcuts::create_shortcut(&desktop_path, &osu_dir, &this_exe, &server);
+        shortcuts::create_shortcut(&osu_dir, &this_exe, &server);
     }
 
     println!("Created shortcuts! Press enter to exit...");

@@ -66,9 +66,10 @@ pub fn setup_icons(osu_dir: &String) {
     }
 }
 
-pub fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &String, server: &String) {
+pub fn create_shortcut(osu_dir: &String, this_exe: &String, server: &String) {
     let name = format!("osu! ({server})");
-    let link_path = format!("{desktop_path}/{name}.lnk");
+    let home_path = std::env::var("USERPROFILE").expect("Failed to get user home");
+    let link_path = format!("{home_path}/Desktop/{name}.lnk");
     let args = format!("switch --osu \"{osu_dir}\" --server \"{server}\"");
 
     if Path::new(&link_path).exists() {
@@ -88,6 +89,7 @@ pub fn create_shortcut(desktop_path: &String, osu_dir: &String, this_exe: &Strin
     link.set_icon_location(Some(icon_path));
     link.set_name(Some(name.clone()));
 
+    println!("Creating shortcut at {link_path}");
     link.create_lnk(link_path)
         .expect("Failed to create shortcut")
 }
