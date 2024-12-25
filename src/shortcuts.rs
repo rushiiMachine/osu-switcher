@@ -1,15 +1,14 @@
 use crate::icons;
 use mslnk::ShellLink;
 use std::fs;
-use std::path::Path;
 
-pub fn create_shortcut(osu_dir: &String, this_exe: &String, server: &String) {
+pub fn create_shortcut(osu_dir: &str, this_exe: &str, server: &str) {
     let name = format!("osu! ({server})");
     let home_path = std::env::var("USERPROFILE").expect("Failed to get user home");
     let link_path = format!("{home_path}/Desktop/{name}.lnk");
     let args = format!("switch --osu \"{osu_dir}\" --server \"{server}\"");
 
-    if Path::new(&link_path).exists() {
+    if fs::exists(&*link_path).unwrap() {
         fs::remove_file(&link_path)
             .expect("Failed to delete old shortcut")
     }

@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, Read};
-use std::path::Path;
-use std::{env, io, panic};
+use std::{env, fs, io, panic};
 
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
@@ -55,8 +54,9 @@ fn configure(_: &Context) {
 
     let stdin = io::stdin();
     let default_osu_path = "%appdata%/Local/osu!";
+    let default_osu_exe = "%appdata%/Local/osu!/osu!.exe";
 
-    let osu_dir = if Path::new(&format!("{default_osu_path}/osu!.exe")).exists() {
+    let osu_dir = if fs::exists(default_osu_exe).unwrap_or(false) {
         println!("Detected osu! installation at {default_osu_path}");
         default_osu_path.to_string()
     } else {
@@ -97,7 +97,7 @@ fn configure(_: &Context) {
 
     let this_exe = &env::current_exe().unwrap().to_string_lossy().to_string();
     for server in servers {
-        shortcuts::create_shortcut(&osu_dir, &this_exe, &server);
+        shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server);
     }
 
     println!("Created shortcuts! Press enter to exit...");
@@ -120,15 +120,14 @@ fn switch(ctx: &Context) {
     let osu_db = format!("{osu_dir}/osu!.db");
     let switcher_cfg = format!("{osu_dir}/server-account-switcher.ini");
 
-    if !Path::new(&osu_cfg).exists() || !Path::new(&osu_db).exists() {
+    if !fs::exists(&*osu_cfg).unwrap_or(false) || !fs::exists(&*osu_db).unwrap_or(false) {
         println!("Missing osu!.db or osu!.{system_username}.cfg, launching the game normally...");
         osu_util::restart_osu(&osu_exe, &server);
         return;
     }
 
-    if !Path::new(&switcher_cfg).exists() {
-        File::create(&switcher_cfg)
-            .expect("Failed to create switcher config");
+    if !fs::exists(&*switcher_cfg).expect("failed to open osu!switcher.ini") {
+        File::create(&switcher_cfg).expect("Failed to create switcher config");
     }
 
     let mut switcher_ini = Ini::load_from_file(&switcher_cfg)
