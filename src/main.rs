@@ -118,12 +118,18 @@ fn switch(ctx: &Context) {
     let osu_cfg = format!("{osu_dir}/osu!.{system_username}.cfg");
     let osu_exe = format!("{osu_dir}/osu!.exe");
     let osu_db = format!("{osu_dir}/osu!.db");
-    let switcher_cfg = format!("{osu_dir}/server-account-switcher.ini");
+    let switcher_cfg = format!("{osu_dir}/osu!switcher.ini");
 
     if !fs::exists(&*osu_cfg).unwrap_or(false) || !fs::exists(&*osu_db).unwrap_or(false) {
         println!("Missing osu!.db or osu!.{system_username}.cfg, launching the game normally...");
         osu_util::restart_osu(&osu_exe, &server);
         return;
+    }
+
+    // Rename the legacy switcher config to the new file name
+    let legacy_cfg = format!("{osu_dir}/server-account-switcher.ini");
+    if fs::exists(&*legacy_cfg).unwrap_or(false) {
+        let _ = fs::rename(&*legacy_cfg, &*switcher_cfg);
     }
 
     if !fs::exists(&*switcher_cfg).expect("failed to open osu!switcher.ini") {
