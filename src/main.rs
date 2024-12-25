@@ -61,19 +61,23 @@ fn configure(_: &Context) {
         default_osu_path.to_string()
     } else {
         println!("Could not detect osu installation! Please enter your osu! directory path below:");
-        let mut path = String::new();
-        for in_path in stdin.lock().lines() {
-            let in_path = in_path.unwrap();
 
-            if !Path::new(&format!("{in_path}/osu!.exe")).exists() {
-                println!("Invalid osu installation! (osu!.exe missing)");
-                continue;
-            }
-
-            path = in_path;
-            break;
-        }
-        path
+        stdin.lock().lines()
+            .filter_map(|input| input.ok())
+            .find(|input| {
+                match fs::exists(&*format!("{input}/osu!.exe")) {
+                    Err(err) => {
+                        println!("Invalid osu installation: {err}");
+                        false
+                    }
+                    Ok(false) => {
+                        println!("Invalid osu installation! (osu!.exe missing)");
+                        false
+                    }
+                    Ok(true) => true
+                }
+            })
+            .unwrap()
     };
 
     let mut servers = Vec::from(["osu.ppy.sh".to_string()]);
