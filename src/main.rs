@@ -5,9 +5,9 @@ use std::{env, fs, io, panic};
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
 
-mod shortcuts;
-mod osu_util;
 mod icons;
+mod osu_util;
+mod shortcuts;
 
 fn main() {
     let osu_flag = Flag::new("osu", FlagType::String)
@@ -117,8 +117,6 @@ fn switch(ctx: &Context) {
     println!("Switching to {server}!");
 
     let system_username = whoami::username();
-    println!("Running for user {system_username}");
-
     let osu_cfg = format!("{osu_dir}/osu!.{system_username}.cfg");
     let osu_exe = format!("{osu_dir}/osu!.exe");
     let osu_db = format!("{osu_dir}/osu!.db");
@@ -145,9 +143,6 @@ fn switch(ctx: &Context) {
     let mut osu_ini = Ini::load_from_file(&osu_cfg)
         .expect(&format!("Failed to read osu!.{system_username}.cfg"));
 
-    // rust trickery
-    // .section() returns an immutable reference,
-    // as long as its in scope I cannot borrow as a mutable reference using .with_section later
     let (old_server, current_username, current_password) = {
         let cfg = osu_ini.section(None::<String>)
             .expect("Corrupted osu user config");
