@@ -90,7 +90,7 @@ fn configure(_: &Context) {
             break;
         }
 
-        if !server.contains(".") {
+        if !server.contains(".") && server != "localhost" {
             println!("Invalid server address!");
             continue;
         }
