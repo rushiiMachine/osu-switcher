@@ -1,4 +1,6 @@
+use std::io::{BufRead, Read, Write};
 use std::process;
+use std::process::exit;
 
 pub fn edit_db(osu_db: &String, username: &String) {
     let mut db = osu_db::Listing::from_file(&osu_db)
@@ -33,13 +35,29 @@ pub fn restart_osu(osu_exe: &String, server: &String) {
 
 /// Clear miscellaneous files that might be an issue when relaunching
 pub fn clear_misc(osu_dir: &str) {
+    // I have no clue what this contains, but I have heard about this potentially containing anti-multi-accounting
+    // data, which might interfere with switching accounts across servers. Just to be safe, wipe it regardless.
+    let _ = std::fs::remove_file(&*format!("{osu_dir}/Logs/osu!auth.log"));
+
     // If this is present, it causes osu! to relaunch and repair itself, which doesn't preserve -devserver
     let force_update_file = format!("{osu_dir}/.require_update");
 
-    // I have no clue what this contains, but I have heard about this potentially containing anti-multi-accounting
-    // data, which might interfere with switching accounts across servers. Just to be safe, wipe it regardless.
-    let osu_auth_logs = format!("{osu_dir}/Logs/osu!auth.log");
+    // Check if user wants to continue if .require_update exists
+    if std::fs::exists(&*force_update_file).unwrap_or(false) {
+        print!("Detected a pending osu! repair! Continue [L]aunching or allow [R]epair? ");
+        std::io::stdout().flush().unwrap();
 
-    let _ = std::fs::remove_file(force_update_file.as_str());
-    let _ = std::fs::remove_file(osu_auth_logs.as_str());
+        let line = std::io::stdin().lock().lines().next().unwrap().unwrap();
+        match line.to_ascii_uppercase().as_bytes() {
+            [b'R'] => {}
+            [b'L'] => {
+                let _ = std::fs::remove_file(force_update_file.as_str());
+            }
+            _ => {
+                println!("Cancelling... Press enter to exit");
+                std::io::stdin().lock().bytes().next();
+                exit(1);
+            }
+        }
+    }
 }
