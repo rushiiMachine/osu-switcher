@@ -13,8 +13,11 @@ pub fn create_shortcut(osu_dir: &str, this_exe: &str, server: &str) {
             .expect("Failed to delete old shortcut")
     }
 
-    let icon_path = icons::write_server_icon(&*osu_dir, &*server)
-        .unwrap_or_else(|| icons::osu_server_icon(&*osu_dir));
+    let icon_path = match server {
+        "ppy.sh" | "osu.ppy.sh" => format!("{osu_dir}/osu!.exe"),
+        _ => icons::write_server_icon(&*osu_dir, &*server)
+            .unwrap_or_else(|| icons::osu_server_icon(&*osu_dir)),
+    };
 
     let mut link = ShellLink::new(this_exe)
         .expect("Failed to initialize a shortcut");
