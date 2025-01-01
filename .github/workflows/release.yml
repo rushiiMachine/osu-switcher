@@ -1,0 +1,49 @@
+name: Publish Release
+
+concurrency:
+  group: "release"
+  cancel-in-progress: true
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    name: Build & Publish
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup toolchain
+        run: |
+          rustup toolchain add --profile=minimal stable
+          rustup target add x86_64-pc-windows-msvc
+          rustup target add i686-pc-windows-msvc
+
+      - name: Build
+        run: |
+          cargo build --target=x86_64-pc-windows-msvc --release
+          cargo build --target=i686-pc-windows-msvc --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osu-switcher
+          path: ${{ github.workspace }}/target/**/osu-switcher.exe
+
+      - run: |
+          mv ./target/x86_64-pc-windows-msvc/release/osu-switcher.exe ./osu-switcher-x86_64.exe
+          mv ./target/i686-pc-windows-msvc/release/osu-switcher.exe ./osu-switcher-x86.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ github.workspace }}/*.exe
