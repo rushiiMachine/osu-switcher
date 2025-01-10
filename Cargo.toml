@@ -1,6 +1,6 @@
 [package]
 name = "osu-switcher"
-version = "1.2.0"
+version = "1.2.1"
 description = "A tool for automatically switching osu! accounts between servers"
 repository = "https://github.com/rushiiMachine/osu-switcher"
 authors = ["rushiiMachine (https://github.com/rushiiMachine)"]
@@ -20,4 +20,5 @@ seahorse = "2.2.0"
 whoami = "1.5.1"
 rust-ini = "0.21.0"
 powershell_script = "1.1.0"
-osu-db = { version = "0.3.0", default-features = false }
+#osu-db = { version = "0.3.0", default-features = false }
+osu-db = { git = "https://github.com/rushiiMachine/osu-db", branch = "fix/breaking-change-20250107", default-features = false }

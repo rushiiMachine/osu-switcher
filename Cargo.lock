@@ -239,8 +239,7 @@ dependencies = [
 [[package]]
 name = "osu-db"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81551da2a88af2d4e6e6776def19894f5b17620b3e5ef78bcc9ea57f278b6f03"
+source = "git+https://github.com/rushiiMachine/osu-db?branch=fix/breaking-change-20250107#b5480df3f934f56d511989a095d4dca08059f576"
 dependencies = [
  "chrono",
  "nom",
@@ -248,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "osu-switcher"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "mslnk",
  "osu-db",
