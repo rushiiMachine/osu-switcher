@@ -17,8 +17,8 @@ codegen-units = 1
 [dependencies]
 mslnk = "0.1.8"
 seahorse = "2.2.0"
-whoami = "1.5.1"
-rust-ini = "0.21.0"
+whoami = "1.5.2"
+rust-ini = "0.21.1"
 powershell_script = "1.1.0"
-#osu-db = { version = "0.3.0", default-features = false }
-osu-db = { git = "https://github.com/rushiiMachine/osu-db", branch = "fix/breaking-change-20250107", default-features = false }
+# 0.2.1 is newer than 0.3.0, supporting the osu!.db format change 20250107
+osu-db = { version = "=0.2.1", default-features = false }
