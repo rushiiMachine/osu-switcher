@@ -37,8 +37,12 @@ pub fn write_server_icon(osu_dir: &str, server: &str) -> Option<String> {
     let path = format!("{osu_dir}/icons/{server}.ico");
 
     if let Some(bytes) = ICONS.get(server) {
+        let icons_path = format!("{osu_dir}/icons");
+
+        std::fs::create_dir_all(&*icons_path)
+            .expect(&*format!("failed to create icons directory {icons_path}"));
         std::fs::write(&*path, bytes)
-            .expect("failed to write server icon to disk");
+            .expect(&*format!("failed to write server icon to disk {path}"));
     } else {
         return None;
     }
