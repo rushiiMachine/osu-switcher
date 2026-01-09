@@ -1,9 +1,9 @@
-use std::fs::File;
-use std::io::{BufRead, Read};
-use std::{env, fs, io, panic};
-
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
+use std::fs::File;
+use std::io::{BufRead, Read};
+use std::path::Path;
+use std::{env, fs, io, panic};
 
 mod icons;
 mod osu_util;
@@ -64,17 +64,23 @@ fn configure(_: &Context) {
 
         stdin.lock().lines()
             .filter_map(|input| input.ok())
-            .find(|input| {
-                match fs::exists(&*format!("{input}/osu!.exe")) {
+            .find_map(|input| {
+                let path = if input.ends_with(".exe") {
+                    Path::new(&*input).parent().unwrap()
+                } else {
+                    Path::new(&*input)
+                };
+
+                match fs::exists(path.join("osu!.exe")) {
                     Err(err) => {
-                        println!("Invalid osu installation: {err}");
-                        false
+                        println!("Invalid osu! installation: {err}");
+                        None
                     }
                     Ok(false) => {
-                        println!("Invalid osu installation! (osu!.exe missing)");
-                        false
+                        println!("Invalid osu! installation! (osu!.exe missing)");
+                        None
                     }
-                    Ok(true) => true
+                    Ok(true) => Some(path.to_str().unwrap().to_string())
                 }
             })
             .unwrap()
