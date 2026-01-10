@@ -22,3 +22,4 @@ rust-ini = "0.21.1"
 powershell_script = "1.1.0"
 # 0.2.1 is newer than 0.3.0, supporting the osu!.db format change 20250107
 osu-db = { version = "=0.2.1", default-features = false }
+windows-registry = "0.6.1"

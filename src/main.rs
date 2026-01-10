@@ -2,7 +2,7 @@ use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
 use std::fs::File;
 use std::io::{BufRead, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{env, fs, io, panic};
 
 mod icons;
@@ -53,38 +53,8 @@ fn configure(_: &Context) {
     println!("Please ensure its in a permanent spot. (exit now if you need to)\n");
 
     let stdin = io::stdin();
-    let default_osu_path = "%appdata%/Local/osu!";
-    let default_osu_exe = "%appdata%/Local/osu!/osu!.exe";
-
-    let osu_dir = if fs::exists(default_osu_exe).unwrap_or(false) {
-        println!("Detected osu! installation at {default_osu_path}");
-        default_osu_path.to_string()
-    } else {
-        println!("Could not detect osu installation! Please enter your osu! directory path below:");
-
-        stdin.lock().lines()
-            .filter_map(|input| input.ok())
-            .find_map(|input| {
-                let path = if input.ends_with(".exe") {
-                    Path::new(&*input).parent().unwrap()
-                } else {
-                    Path::new(&*input)
-                };
-
-                match fs::exists(path.join("osu!.exe")) {
-                    Err(err) => {
-                        println!("Invalid osu! installation: {err}");
-                        None
-                    }
-                    Ok(false) => {
-                        println!("Invalid osu! installation! (osu!.exe missing)");
-                        None
-                    }
-                    Ok(true) => Some(path.to_str().unwrap().to_string())
-                }
-            })
-            .unwrap()
-    };
+    let osu_dir = get_install_dir();
+    let osu_dir = osu_dir.to_str().unwrap();
 
     let mut servers = Vec::from(["osu.ppy.sh".to_string()]);
     println!("\nPlease enter the server addresses you want to generate shortcuts for! Press enter after each or to finish.");
@@ -198,4 +168,47 @@ fn switch(ctx: &Context) {
 
     osu_util::clear_misc(&*osu_dir);
     osu_util::restart_osu(&osu_exe, &server);
+}
+
+fn get_install_dir() -> PathBuf {
+    let reg_open_command = windows_registry::CLASSES_ROOT
+        .open("osustable.File.osz\\Shell\\Open\\Command")
+        .and_then(|key| key.get_string(""));
+
+    if let Ok(open_cmd) = reg_open_command {
+        if let Some(osu_exe) = open_cmd.split("\"").skip(1).next() {
+            if fs::exists(osu_exe).unwrap_or(false) {
+                let osu_dir = Path::new(osu_exe)
+                    .parent().expect("invalid osu! shell registry key");
+
+                println!("Found osu! installation at {}", osu_dir.to_string_lossy());
+                return PathBuf::from(osu_dir);
+            }
+        }
+    }
+
+    println!("Could not detect an osu! installation! Please enter your osu! directory path below:");
+    io::stdin().lock().lines()
+        .filter_map(|input| input.ok())
+        .find_map(|input| {
+            // Strip osu!.exe if user specified executable instead of install directory
+            let path = if input.ends_with(".exe") {
+                Path::new(&*input).parent().unwrap()
+            } else {
+                Path::new(&*input)
+            };
+
+            match fs::exists(path.join("osu!.exe")) {
+                Err(err) => {
+                    println!("Invalid osu! installation: {err}");
+                    None
+                }
+                Ok(false) => {
+                    println!("Invalid osu! installation! (osu!.exe missing)");
+                    None
+                }
+                Ok(true) => Some(path.to_path_buf())
+            }
+        })
+        .unwrap()
 }
