@@ -1,8 +1,8 @@
 use crate::osu_util::{check_osu_installation, find_osu_installation, flatten_osu_installation};
 use crate::tui::input::InputState;
 use crate::{icons, shortcuts};
-use color_eyre::Result;
 use color_eyre::eyre::Context;
+use color_eyre::Result;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::prelude::*;
@@ -288,33 +288,31 @@ Press 'Ctrl+C' to forcefully exit.
             AppState::SelectingOsuDirectory { items, default } => {
                 Self::draw_install_dir_picker(frame, area, default, items);
             }
-            AppState::InputtingOsuDirectory { input, retrying } => {
+            AppState::InputtingOsuDirectory { input, retrying } => Self::draw_text_box(
+                frame,
+                area,
+                input,
+                " Enter osu! installation directory (eg. 'D:\\osu!') ",
                 if *retrying {
-                    todo!()
-                }
-
-                Self::draw_text_box(
-                    frame,
-                    area,
-                    input,
-                    " Enter osu! installation directory (eg. 'D:\\osu!') ",
-                )
-            }
+                    Some("Invalid osu! installation! Please try again.")
+                } else {
+                    None
+                },
+            ),
             AppState::SelectingOsuDomains { items } => {
                 Self::draw_domains_picker(frame, area, &*self.osu_servers, items);
             }
-            AppState::InputtingOsuDomain { input, retrying } => {
+            AppState::InputtingOsuDomain { input, retrying } => Self::draw_text_box(
+                frame,
+                area,
+                input,
+                " Enter new osu! private server domain (eg. 'akatsuki.pw') ",
                 if *retrying {
-                    todo!()
-                }
-
-                Self::draw_text_box(
-                    frame,
-                    area,
-                    input,
-                    " Enter new osu! private server domain (eg. 'akatsuki.pw') ",
-                )
-            }
+                    Some("Invalid domain! Please try again.")
+                } else {
+                    None
+                },
+            ),
             AppState::Exiting => Self::draw_exiting(frame, area),
         };
     }
@@ -396,16 +394,37 @@ Press 'Ctrl+C' to forcefully exit.
         frame.render_stateful_widget(options, area, list);
     }
 
-    fn draw_text_box(frame: &mut Frame, area: Rect, input: &InputState, title: &str) {
-        let area = area
-            .resize(Size::new(area.width, 3))
-            .centered_vertically(Constraint::Length(3));
+    fn draw_text_box(
+        frame: &mut Frame,
+        area: Rect,
+        input: &InputState,
+        title: &str,
+        error: Option<&str>,
+    ) {
+        let all_area = area
+            .resize(Size::new(area.width, 4))
+            .centered_vertically(Constraint::Length(4));
+        let [text_area, notice_area] = all_area.layout(&Layout::vertical([
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ]));
 
-        let input_text = Paragraph::new(input.text())
-            .style(Style::new().white())
-            .block(Self::block_border().padding(Padding::left(1)).title(title));
+        let block = Self::block_border()
+            .padding(Padding::left(1))
+            .border_style(if error.is_some() {
+                Style::new().red()
+            } else {
+                Style::new().gray().dim()
+            })
+            .title(title);
 
-        frame.render_widget(input_text, area);
+        let input_text = Paragraph::new(input.text()).block(block);
+        frame.render_widget(input_text, text_area);
+
+        if let Some(error) = error {
+            let notice_text = Paragraph::new(error).red();
+            frame.render_widget(notice_text, notice_area);
+        }
 
         frame.set_cursor_position(Position::new(
             // Draw the cursor at the current position in the input field.
