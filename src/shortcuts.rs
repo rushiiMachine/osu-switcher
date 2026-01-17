@@ -32,7 +32,6 @@ pub fn create_shortcut(osu_dir: &Path, this_exe: &Path, server: &str) {
     link.set_icon_location(Some(icon_path));
     link.set_name(Some(name.clone()));
 
-    println!("Creating shortcut at {link_path}");
     link.create_lnk(link_path)
         .expect("Failed to create shortcut")
 }

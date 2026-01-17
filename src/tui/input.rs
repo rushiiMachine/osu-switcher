@@ -14,6 +14,11 @@ impl InputState {
         &*self.buffer
     }
 
+    /// Returns the **character** position of the cursor in the text area.
+    pub fn position(&self) -> usize {
+        self.cursor_pos
+    }
+
     /// Moves the cursor to the start of the input.
     pub fn reset_cursor(&mut self) {
         self.cursor_pos = 0;
@@ -73,12 +78,10 @@ impl InputState {
 
     /// Handles a key event
     pub fn handle_event(&mut self, event: KeyEvent) {
+        if !matches!(event.kind, KeyEventKind::Press | KeyEventKind::Repeat) { return; }
+
         match event.code {
-            KeyCode::Char(char)
-                if matches!(event.kind, KeyEventKind::Press | KeyEventKind::Repeat) =>
-            {
-                self.add_char(char)
-            }
+            KeyCode::Char(char) => self.add_char(char),
             KeyCode::Backspace => self.delete_char(),
             KeyCode::Left => self.move_cursor_left(),
             KeyCode::Right => self.move_cursor_right(),
