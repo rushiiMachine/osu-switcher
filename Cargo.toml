@@ -5,7 +5,7 @@ description = "A tool for automatically switching osu! accounts between servers"
 repository = "https://github.com/rushiiMachine/osu-switcher"
 authors = ["rushiiMachine (https://github.com/rushiiMachine)"]
 license-file = "LICENSE"
-edition = "2021"
+edition = "2024"
 publish = false
 
 [profile.release]
@@ -17,9 +17,21 @@ codegen-units = 1
 [dependencies]
 mslnk = "0.1.8"
 seahorse = "2.2.0"
-whoami = "1.5.2"
+whoami = "2.0.2"
 rust-ini = "0.21.1"
 powershell_script = "1.1.0"
 # 0.2.1 is newer than 0.3.0, supporting the osu!.db format change 20250107
 osu-db = { version = "=0.2.1", default-features = false }
 windows-registry = "0.6.1"
+color-eyre = "0.6.5"
+crossterm = "0.29.0"
+
+[dependencies.ratatui]
+version = "0.30.0"
+default-features = false
+features = [
+    "crossterm",
+    "underline-color",
+    "macros",
+    "layout-cache",
+]

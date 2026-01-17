@@ -1,5 +1,6 @@
 use std::io::{BufRead, Read, Write};
-use std::process;
+use std::path::{Path, PathBuf};
+use std::{fs, process};
 use std::process::exit;
 
 pub fn edit_db(osu_db: &String, username: &String) {
@@ -60,4 +61,44 @@ pub fn clear_misc(osu_dir: &str) {
             }
         }
     }
+}
+
+/// Checks whether the specified osu! stable installation directory exists.
+/// [path]: Either the osu! installation directory or the osu! executable itself.
+pub fn check_osu_installation(mut path: &Path) -> bool {
+    // Resolve parent directory if osu! executable was specified
+    if let Some(file_name) = path.file_name() {
+        if file_name == "osu!.exe" {
+            if let Some(dir) = path.parent() {
+                path = dir;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    // OpenTK.dll is checked to ensure this isn't an osu! lazer installation
+    fs::exists(path.join("osu!.exe")).unwrap_or(false)
+        && fs::exists(path.join("OpenTK.dll")).unwrap_or(false)
+}
+
+/// Attempts to retrieve an osu! stable installation based on the associated osu! stable application
+/// to open `*.osz` files with from the Windows registry.
+pub fn get_osu_installation() -> Option<PathBuf> {
+    let reg_open_command = windows_registry::CLASSES_ROOT
+        .open("osustable.File.osz\\Shell\\Open\\Command")
+        .and_then(|key| key.get_string(""));
+
+    if let Ok(open_cmd) = reg_open_command {
+        if let Some(osu_exe) = open_cmd.split("\"").skip(1).next() {
+            let osu_exe = Path::new(osu_exe);
+
+            return if check_osu_installation(osu_exe) {
+                Some(osu_exe.to_path_buf())
+            } else {
+                None
+            };
+        }
+    }
+    None
 }
