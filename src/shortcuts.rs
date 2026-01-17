@@ -89,10 +89,16 @@ fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) -> Result
         panic!("user desktop directory does not exist!");
     }
 
+    // Rewrite special server domains
+    let server_domain = match server {
+        "akatsuki.pw" => "akatsuki.gg", // Moved to new domain
+        _ => server,
+    };
+
     let name = format!("osu! ({server})");
     let link_path = desktop_path.join(&*format!("{name}.lnk"));
     let args = format!(
-        "switch --osu \"{0}\" --server \"{server}\"",
+        "switch --osu \"{0}\" --server \"{server_domain}\"",
         osu_dir
             .to_str()
             .expect("osu! install directory contains invalid characters")
