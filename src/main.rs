@@ -2,8 +2,7 @@ use crate::tui::start_tui;
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
 use std::fs::File;
-use std::io::Read;
-use std::{env, fs, io, panic};
+use std::{env, fs, panic};
 
 mod icons;
 mod osu_util;
@@ -44,9 +43,8 @@ fn main() -> color_eyre::Result<()> {
     });
 
     if app_result.is_err() {
-        println!("\nAn error has occurred! Please create an issue on this project's Github with the log! ({0}/issues)", env!("CARGO_PKG_REPOSITORY"));
-        println!("Press enter to exit...");
-        io::stdin().lock().bytes().next();
+        println!("\nAn error has occurred! Please create an issue on this \
+        project's Github with the log! ({0}/issues)", env!("CARGO_PKG_REPOSITORY"));
     };
 
     Ok(())
