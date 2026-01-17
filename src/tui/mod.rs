@@ -10,7 +10,6 @@ use ratatui::widgets::{
     Block, Borders, HighlightSpacing, List, ListState, Padding, Paragraph, Wrap,
 };
 use std::cmp::PartialEq;
-use std::env;
 use std::path::{Path, PathBuf};
 
 mod input;
@@ -39,7 +38,6 @@ enum AppState {
         retrying: bool,
     },
     SelectingOsuDomains {
-        // FIXME: this should be preserved while adding a new domain
         items: ListState,
     },
     InputtingOsuDomain {
@@ -180,7 +178,8 @@ Press 'Ctrl+C' to forcefully exit.
                             enabled: true,
                         });
                         self.state = AppState::SelectingOsuDomains {
-                            items: ListState::default(),
+                            items: ListState::default()
+                                .with_selected(Some(self.osu_servers.len() - 1)),
                         };
                     }
                 }
@@ -196,17 +195,12 @@ Press 'Ctrl+C' to forcefully exit.
                             retrying: false,
                         }
                     } else {
-                        let this_exe = env::current_exe()?;
                         let osu_dir = self.osu_dir.as_deref().unwrap();
+                        let servers = self.osu_servers.iter()
+                            .filter(|server| server.enabled)
+                            .map(|server| &*server.domain);
 
-                        for server in &self.osu_servers {
-                            if !server.enabled {
-                                continue;
-                            }
-
-                            shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server.domain);
-                        }
-
+                        shortcuts::install(osu_dir, servers)?;
                         self.state = AppState::Exiting;
                     }
                 }

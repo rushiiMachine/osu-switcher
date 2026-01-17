@@ -1,8 +1,10 @@
+use color_eyre::eyre::{Context, ContextCompat};
+use color_eyre::Result;
 use mslnk::ShellLink;
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
+use std::{env, fs};
 
 /// All the icons of private servers I could find.\
 /// They were converted into icon files with ImageMagick:
@@ -50,37 +52,41 @@ fn osu_server_icon(osu_dir: &Path) -> PathBuf {
 
 /// Writes a server icon shipped with this executable to the osu! directory
 /// to be used as shortcut icons, since they need to be on disk.
-fn write_server_icon(osu_dir: &Path, server: &str) -> Option<PathBuf> {
+fn write_server_icon(osu_dir: &Path, server: &str) -> Result<PathBuf> {
     let icons_dir = osu_dir.join("icons");
     let icon_path = icons_dir.join(format!("{server}.ico"));
 
-    if let Some(bytes) = ICONS.get(server) {
-        fs::create_dir_all(&*icons_dir)
-            .expect(&*format!("failed to create icons directory {icons_dir:?}"));
-        fs::write(&*icon_path, bytes).expect(&*format!(
-            "failed to write server icon to disk {icons_dir:?}"
-        ));
-    } else {
-        return None;
+    // Fast path
+    if server == "ppy.sh" || server == "osu.ppy.sh" {
+        return Ok(osu_server_icon(&*osu_dir));
     }
 
-    Some(icon_path)
+    if let Some(bytes) = ICONS.get(server) {
+        fs::create_dir_all(&*icons_dir)
+            .with_context(|| format!("failed to create icons directory {icons_dir:?}"))?;
+        fs::write(&*icon_path, bytes)
+            .with_context(|| format!("failed to write server icon to disk {icons_dir:?}"))?;
+
+        Ok(icon_path)
+    } else {
+        Ok(osu_server_icon(&*osu_dir))
+    }
 }
 
 /// Creates a shortcut on the user's Desktop to this osu!switcher binary that triggers an auth
-/// switch to a different osu! private server.  
-pub fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) {
-    let home_path = std::env::var("USERPROFILE").expect("Failed to get user home");
+/// switch to a different osu! private server.
+fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) -> Result<()> {
+    let home_path = env::var_os("USERPROFILE")
+        .context("USERPROFILE environment variable unset")?;
     let home_path = Path::new(&*home_path);
 
     let desktop_path = home_path.join("Desktop");
-    if fs::exists(&*desktop_path).unwrap_or(false) {
+    if !fs::exists(&*desktop_path).unwrap_or(false) {
         panic!("user desktop directory does not exist!");
     }
 
     let name = format!("osu! ({server})");
     let link_path = desktop_path.join(&*format!("{name}.lnk"));
-
     let args = format!(
         "switch --osu \"{0}\" --server \"{server}\"",
         osu_dir
@@ -88,16 +94,15 @@ pub fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) {
             .expect("osu! install directory contains invalid characters")
     );
 
-    if fs::exists(&*link_path).unwrap() {
-        fs::remove_file(&link_path).expect("Failed to delete old shortcut")
+    let icon_path = write_server_icon(osu_dir, server)?;
+
+    if fs::exists(&*link_path).unwrap_or(false) {
+        fs::remove_file(&link_path)
+            .with_context(|| format!("failed to delete old shortcut {link_path:?}"))?;
     }
 
-    let icon_path = match server {
-        "ppy.sh" | "osu.ppy.sh" => osu_server_icon(&*osu_dir),
-        _ => write_server_icon(&*osu_dir, &*server).unwrap_or_else(|| osu_server_icon(&*osu_dir)),
-    };
-
-    let mut link = ShellLink::new(switcher_path).expect("Failed to initialize a shortcut");
+    let mut link = ShellLink::new(switcher_path)
+        .with_context(|| format!("failed to create shortcut {switcher_path:?}"))?;
     link.set_arguments(Some(args));
     link.set_icon_location(Some(
         icon_path
@@ -108,5 +113,45 @@ pub fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) {
     link.set_name(Some(name.clone()));
 
     link.create_lnk(link_path)
-        .expect("Failed to create shortcut")
+        .with_context(|| format!("failed to create shortcut {switcher_path:?}"))?;
+    Ok(())
+}
+
+/// Installs this switcher in a permanent location and creates the specified server shortcuts.
+pub fn install<'a, S>(osu_dir: &Path, servers: S) -> Result<()>
+where
+    S: IntoIterator<Item=&'a str>,
+{
+    let this_exe = env::current_exe()
+        .context("failed to get path to current running executable")?;
+    let localappdata = env::var_os("LOCALAPPDATA")
+        .context("LOCALAPPDATA environment variable unset")?;
+
+    // Install self to permanent location
+    let installed_exe = if !this_exe.starts_with(&*localappdata) {
+        let install_dir = Path::new(&*localappdata).join("osu!switcher");
+        let new_exe = install_dir.join("osu!switcher.exe");
+        let readme_exe = install_dir.join("README.txt");
+
+        const README_BANNER: &str = "\
+        This is the permanent installation location of osu!switcher (https://github.com/rushiiMachine/osu-switcher).\n\
+        The 'osu!switcher.exe' executable is referenced by the osu! shortcuts generated onto the desktop.\n\
+        ";
+
+        fs::create_dir_all(&*install_dir)
+            .with_context(|| format!("failed to create installation dir {install_dir:?}"))?;
+        fs::copy(&*this_exe, &*new_exe)
+            .with_context(|| format!("failed to copy current executable to installation dir {new_exe:?}"))?;
+        fs::write(&*readme_exe, README_BANNER)?;
+
+        new_exe
+    } else {
+        this_exe
+    };
+
+    for server in servers {
+        create_shortcut(osu_dir, &*installed_exe, server)?;
+    }
+
+    Ok(())
 }
