@@ -1,5 +1,6 @@
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use std::borrow::Cow;
-use std::io::{BufRead, Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::{fs, process};
@@ -39,26 +40,41 @@ pub fn restart_osu(osu_exe: &String, server: &String) {
 pub fn clear_misc(osu_dir: &str) {
     // I have no clue what this contains, but I have heard about this potentially containing anti-multi-accounting
     // data, which might interfere with switching accounts across servers. Just to be safe, wipe it regardless.
-    let _ = std::fs::remove_file(&*format!("{osu_dir}/Logs/osu!auth.log"));
+    let _ = fs::remove_file(&*format!("{osu_dir}/Logs/osu!auth.log"));
 
     // If this is present, it causes osu! to relaunch and repair itself, which doesn't preserve -devserver
     let force_update_file = format!("{osu_dir}/.require_update");
 
     // Check if user wants to continue if .require_update exists
-    if std::fs::exists(&*force_update_file).unwrap_or(false) {
+    if fs::exists(&*force_update_file).unwrap_or(false) {
         print!("Detected a pending osu! repair! Continue [L]aunching or allow [R]epair? ");
         std::io::stdout().flush().unwrap();
 
-        let line = std::io::stdin().lock().lines().next().unwrap().unwrap();
-        match line.to_ascii_uppercase().as_bytes() {
-            [b'R'] => {}
-            [b'L'] => {
-                let _ = std::fs::remove_file(force_update_file.as_str());
-            }
-            _ => {
-                println!("Cancelling... Press enter to exit");
-                std::io::stdin().lock().bytes().next();
-                exit(1);
+        loop {
+            match crossterm::event::read() {
+                Ok(Event::Key(KeyEvent {
+                    code: KeyCode::Char('r'),
+                    kind: KeyEventKind::Press,
+                    ..
+                })) => {
+                    // TODO: don't switch accounts in this case
+                    println!("\nAllowing osu! updater repair to continue...");
+                    break;
+                }
+                Ok(Event::Key(KeyEvent {
+                    code: KeyCode::Char('l'),
+                    kind: KeyEventKind::Press,
+                    ..
+                })) => {
+                    println!("\nCancelling scheduled osu! updater repair...");
+                    let _ = fs::remove_file(force_update_file.as_str());
+                    break;
+                }
+                Ok(Event::Key(_)) => {
+                    println!("Cancelling...");
+                    exit(1);
+                }
+                _ => {}
             }
         }
     }
