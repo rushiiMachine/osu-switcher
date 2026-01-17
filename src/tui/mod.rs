@@ -1,6 +1,6 @@
 use crate::osu_util::{check_osu_installation, find_osu_installation, flatten_osu_installation};
+use crate::shortcuts;
 use crate::tui::input::InputState;
-use crate::{icons, shortcuts};
 use color_eyre::eyre::Context;
 use color_eyre::Result;
 use crossterm::event;
@@ -106,7 +106,7 @@ Press 'Ctrl+C' to forcefully exit.
             },
         };
 
-        let mut known_servers = icons::ICONS.keys().collect::<Vec<_>>();
+        let mut known_servers = shortcuts::ICONS.keys().collect::<Vec<_>>();
         known_servers.sort_unstable();
 
         for domain in known_servers {

@@ -4,7 +4,6 @@ use seahorse::{App, Command, Context, Flag, FlagType};
 use std::fs::File;
 use std::{env, fs, panic};
 
-mod icons;
 mod osu_util;
 mod shortcuts;
 mod tui;
