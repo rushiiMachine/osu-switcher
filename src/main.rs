@@ -1,18 +1,16 @@
 use crate::tui::start_tui;
-use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
-use std::fs::File;
-use std::{env, fs, panic};
+use std::{env, panic};
 
 mod osu_util;
 mod shortcuts;
+mod switcher;
 mod tui;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let osu_flag = Flag::new("osu", FlagType::String)
-        .description("osu! game directory path");
+    let osu_flag = Flag::new("osu", FlagType::String).description("osu! game directory path");
     let server_flag = Flag::new("server", FlagType::String)
         .description("The target server address (optional). ex: --server akatsuki.pw");
 
@@ -37,101 +35,26 @@ fn main() -> color_eyre::Result<()> {
         .command(switch_cmd)
         .command(configure_cmd);
 
-    let app_result = panic::catch_unwind(|| {
-        app.run(env::args().collect())
-    });
+    let app_result = panic::catch_unwind(|| app.run(env::args().collect()));
 
     if app_result.is_err() {
-        println!("\nAn error has occurred! Please create an issue on this \
-        project's Github with the log! ({0}/issues)", env!("CARGO_PKG_REPOSITORY"));
+        println!(
+            "\nAn error has occurred! Please create an issue on this \
+        project's Github with the log! ({0}/issues)",
+            env!("CARGO_PKG_REPOSITORY")
+        );
     };
 
     Ok(())
 }
 
 fn switch(ctx: &Context) {
-    let osu_dir = ctx.string_flag("osu")
+    let osu_dir = ctx
+        .string_flag("osu")
         .expect("The --osu flag is required in order to start osu");
-    let server = ctx.string_flag("server")
+    let server = ctx
+        .string_flag("server")
         .unwrap_or("osu.ppy.sh".to_string());
-    println!("Using {osu_dir} as the target osu directory!");
-    println!("Switching to {server}!");
 
-    let system_username = whoami::username()
-        .expect("failed to get username");
-    let osu_cfg = format!("{osu_dir}/osu!.{system_username}.cfg");
-    let osu_exe = format!("{osu_dir}/osu!.exe");
-    let osu_db = format!("{osu_dir}/osu!.db");
-    let switcher_cfg = format!("{osu_dir}/osu!switcher.ini");
-
-    if !fs::exists(&*osu_cfg).unwrap_or(false) || !fs::exists(&*osu_db).unwrap_or(false) {
-        println!("Missing osu!.db or osu!.{system_username}.cfg, launching the game normally...");
-        osu_util::restart_osu(&osu_exe, &server);
-        return;
-    }
-
-    // Rename the legacy switcher config to the new file name
-    let legacy_cfg = format!("{osu_dir}/server-account-switcher.ini");
-    if fs::exists(&*legacy_cfg).unwrap_or(false) {
-        let _ = fs::rename(&*legacy_cfg, &*switcher_cfg);
-    }
-
-    if !fs::exists(&*switcher_cfg).expect("failed to open osu!switcher.ini") {
-        File::create(&switcher_cfg).expect("Failed to create switcher config");
-    }
-
-    let mut switcher_ini = Ini::load_from_file(&switcher_cfg)
-        .expect("Failed to read switcher config");
-    let mut osu_ini = Ini::load_from_file(&osu_cfg)
-        .expect(&format!("Failed to read osu!.{system_username}.cfg"));
-
-    let (old_server, current_username, current_password) = {
-        let cfg = osu_ini.section(None::<String>)
-            .expect("Corrupted osu user config");
-
-        let old_server = cfg.get("CredentialEndpoint")
-            .unwrap_or("")
-            .to_string();
-
-        (
-            if old_server != "" { old_server } else { "osu.ppy.sh".to_string() },
-            cfg.get("Username").unwrap_or("").to_string(),
-            cfg.get("Password").unwrap_or("").to_string(),
-        )
-    };
-
-    if old_server != server.as_str() {
-        match switcher_ini.section(Some(&server)) {
-            None => {
-                osu_ini
-                    .with_section(None::<String>)
-                    .set("Password", "");
-            }
-            Some(section) => {
-                let new_username = section.get("Username").unwrap_or("");
-                let new_password = section.get("Password").unwrap_or("");
-                let new_server = if server == "osu.ppy.sh" { "" } else { &server };
-
-                osu_ini.with_section(None::<String>)
-                    .set("Username", new_username)
-                    .set("Password", new_password)
-                    .set("CredentialEndpoint", new_server);
-
-                osu_util::edit_db(&osu_db, &new_username.to_string());
-            }
-        }
-
-        switcher_ini
-            .with_section(Some(old_server))
-            .set("Username", current_username)
-            .set("Password", current_password);
-
-        osu_ini.write_to_file(&osu_cfg)
-            .expect("Failed to save osu user config");
-        switcher_ini.write_to_file(&switcher_cfg)
-            .expect("Failed to save switcher config");
-    }
-
-    osu_util::clear_misc(&*osu_dir);
-    osu_util::restart_osu(&osu_exe, &server);
+    switcher::switch_servers(&*osu_dir, &*server).unwrap();
 }

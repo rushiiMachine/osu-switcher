@@ -20,9 +20,9 @@ An osu!stable server + account switcher to automate signing in across different 
 
 - osu!switcher persists itself to `%localappdata%/osu!switcher/` to ensure the shortcuts don't break
   if the executable gets deleted later.
-- Due to an osu!stable bug outside my control, you may need to sign-in **twice** for new servers across two separate
+- Due to an osu!stable bug outside my control, you may need to sign-in **twice** for new servers across separate
   osu! launches before your credentials for the new server can be permanently saved.
-- If you plan on moving osu!'s installation directory (eg. to a different drive),
+- If you plan on moving osu!'s installation directory (e.g. to a different drive),
   the shortcuts will have to be regenerated.
 
 ## How does it work?
@@ -37,7 +37,7 @@ osu! stores account details in two separate files:
 The first one contains several keys responsible for storing authentication:
 
 - `Username` -> Last attempted sign-in username
-- `Password` -> Then current signed-in account's session key (possibly HWID-specific?)
+- `Password` -> Current signed-in account's session key (possibly HWID-specific?)
 - `CredentialEndpoint` -> The authentication server the session key was obtained from
 
 The `osu!.db` binary database contains a field that records the same value as the `Username` field. This is

@@ -1,83 +1,32 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
+use color_eyre::eyre::Context;
 use std::borrow::Cow;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::exit;
 use std::{fs, process};
 
-pub fn edit_db(osu_db: &String, username: &String) {
-    let mut db = osu_db::Listing::from_file(&osu_db)
-        .expect("Failed to open osu!.db");
-    db.player_name = Some(username.to_owned());
-    db.save(&osu_db)
-        .expect("Failed to save osu!.db");
-}
-
-pub fn restart_osu(osu_exe: &String, server: &String) {
+/// Forcefully restarts osu! and launches it with a specified server.
+pub fn restart_osu(osu_exe: &str, server: &str) -> color_eyre::Result<()> {
     let powershell_cmd: &str = "\
         $p = Get-Process -Name osu! -ErrorAction SilentlyContinue; \
         if (!$p) { Exit 0; }; \
         Stop-Process -Force -InputObject $p -ErrorAction Stop; \
         Wait-Process -InputObject $p";
 
-    match powershell_script::run(powershell_cmd) {
-        Err(e) => panic!("Failed to kill osu!:\n{e}"),
-        _ => println!("Killed running osu!.exe, restarting..."),
-    }
+    powershell_script::run(powershell_cmd).context("failed to kill osu!")?;
+    println!("Killed running osu!.exe, restarting...");
 
-    let server = if server == "osu.ppy.sh" { "" } else { server };
+    // Remap special server domains
+    let server = match server {
+        "akatsuki.pw" => "akatsuki.gg", // Moved to new domain
+        "osu.ppy.sh" => "",             // Empty argument defaults to Bancho
+        server => server,
+    };
+
     process::Command::new("cmd")
-        .args(&[
-            "/C",
-            "start", osu_exe,
-            "-devserver", server,
-        ])
+        .args(&["/C", "start", osu_exe, "-devserver", server])
         .spawn()
-        .expect("Failed to start osu");
-}
+        .context("failed to start osu!")?;
 
-/// Clear miscellaneous files that might be an issue when relaunching
-pub fn clear_misc(osu_dir: &str) {
-    // I have no clue what this contains, but I have heard about this potentially containing anti-multi-accounting
-    // data, which might interfere with switching accounts across servers. Just to be safe, wipe it regardless.
-    let _ = fs::remove_file(&*format!("{osu_dir}/Logs/osu!auth.log"));
-
-    // If this is present, it causes osu! to relaunch and repair itself, which doesn't preserve -devserver
-    let force_update_file = format!("{osu_dir}/.require_update");
-
-    // Check if user wants to continue if .require_update exists
-    if fs::exists(&*force_update_file).unwrap_or(false) {
-        print!("Detected a pending osu! repair! Continue [L]aunching or allow [R]epair? ");
-        std::io::stdout().flush().unwrap();
-
-        loop {
-            match crossterm::event::read() {
-                Ok(Event::Key(KeyEvent {
-                    code: KeyCode::Char('r'),
-                    kind: KeyEventKind::Press,
-                    ..
-                })) => {
-                    // TODO: don't switch accounts in this case
-                    println!("\nAllowing osu! updater repair to continue...");
-                    break;
-                }
-                Ok(Event::Key(KeyEvent {
-                    code: KeyCode::Char('l'),
-                    kind: KeyEventKind::Press,
-                    ..
-                })) => {
-                    println!("\nCancelling scheduled osu! updater repair...");
-                    let _ = fs::remove_file(force_update_file.as_str());
-                    break;
-                }
-                Ok(Event::Key(_)) => {
-                    println!("Cancelling...");
-                    exit(1);
-                }
-                _ => {}
-            }
-        }
-    }
+    Ok(())
 }
 
 /// Flattens the input osu! installation directory path if it is actually the osu! executable.
