@@ -22,7 +22,7 @@ use std::{env, fs};
 /// - `osuwtf.pw`
 /// - `nerose.click`
 // TODO: add localhost icon
-pub static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
+static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
     // @formatter:off
     ("akatsuki.gg", include_bytes!("../assets/akatsuki.gg.ico").as_slice()),
     ("akatsuki.pw", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
@@ -43,6 +43,14 @@ pub static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new
     ("ussr.pl", include_bytes!("../assets/ussr.pl.ico").as_slice()),
     // @formatter:on
 ]));
+
+/// Returns all known osu! server domains.
+pub fn known_servers() -> Vec<String> {
+    let mut servers = vec!["osu.ppy.sh".to_owned()];
+    servers.extend(ICONS.keys().map(|s| (*s).to_owned()));
+    servers.sort_unstable();
+    servers
+}
 
 /// Returns the path to the osu! logo to be used as a shortcut icon.
 /// This resolves to the osu! executable.

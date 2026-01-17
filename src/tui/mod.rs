@@ -104,12 +104,9 @@ Press 'Ctrl+C' to forcefully exit.
             },
         };
 
-        let mut known_servers = shortcuts::ICONS.keys().collect::<Vec<_>>();
-        known_servers.sort_unstable();
-
-        for domain in known_servers {
+        for domain in shortcuts::known_servers() {
             self.osu_servers.push(ServerState {
-                domain: (*domain).to_owned(),
+                domain,
                 enabled: false,
             })
         }
@@ -196,7 +193,9 @@ Press 'Ctrl+C' to forcefully exit.
                         }
                     } else {
                         let osu_dir = self.osu_dir.as_deref().unwrap();
-                        let servers = self.osu_servers.iter()
+                        let servers = self
+                            .osu_servers
+                            .iter()
                             .filter(|server| server.enabled)
                             .map(|server| &*server.domain);
 
