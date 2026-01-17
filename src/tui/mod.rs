@@ -1,12 +1,14 @@
-use crate::osu_util::{check_osu_installation, find_osu_installation};
-use crate::shortcuts;
+use crate::osu_util::{check_osu_installation, find_osu_installation, flatten_osu_installation};
 use crate::tui::input::InputState;
+use crate::{icons, shortcuts};
 use color_eyre::eyre::Context;
 use color_eyre::Result;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, HighlightSpacing, List, ListState, Padding, Paragraph, Wrap};
+use ratatui::widgets::{
+    Block, Borders, HighlightSpacing, List, ListState, Padding, Paragraph, Wrap,
+};
 use ratatui::DefaultTerminal;
 use std::cmp::PartialEq;
 use std::env;
@@ -33,27 +35,39 @@ enum AppState {
         items: ListState,
         default: PathBuf,
     },
-    InputtingOsuDirectory { input: InputState, retrying: bool },
+    InputtingOsuDirectory {
+        input: InputState,
+        retrying: bool,
+    },
     SelectingOsuDomains {
         // FIXME: this should be preserved while adding a new domain
         items: ListState,
     },
-    InputtingOsuDomain { input: InputState, retrying: bool },
+    InputtingOsuDomain {
+        input: InputState,
+        retrying: bool,
+    },
     Exiting,
+}
+
+#[derive(Debug)]
+struct ServerState {
+    domain: String,
+    enabled: bool,
 }
 
 #[derive(Debug, Default)]
 struct App {
     state: AppState,
     osu_dir: Option<PathBuf>,
-    osu_domains: Vec<String>,
+    osu_servers: Vec<ServerState>,
 }
 
 impl App {
     const BANNER: &'static str = "
 ██████ █████ ██  ██   ██   █████ ██     ██ ██ ██████ █████ ██   ██
-██  ██ ██    ██  ██   ██   ██    ██     ██ ██   ██   ██    ██ █ ██
-██  ██    ██ ██  ██           ██ ██ ███ ██ ██   ██   ██    ██   ██
+██  ██ ██    ██  ██   ██   ██    ██     ██ ██   ██   ██    ██   ██
+██  ██    ██ ██  ██           ██ ██ ███ ██ ██   ██   ██    ██ █ ██
 ██████ █████ ██████   ██   █████  ███ ███  ██   ██   █████ ██   ██
 
 osu!stable server+account switcher to automate re-signing in
@@ -87,8 +101,15 @@ Press 'Ctrl+C' to forcefully exit.
             None => AppState::InputtingOsuDirectory {
                 input: InputState::default(),
                 retrying: false,
-            }
+            },
         };
+
+        for domain in icons::ICONS.keys() {
+            self.osu_servers.push(ServerState {
+                domain: (*domain).to_owned(),
+                enabled: false,
+            })
+        }
     }
 
     /// Handles an input event and returns whether the loop should continue.
@@ -125,16 +146,17 @@ Press 'Ctrl+C' to forcefully exit.
                                 retrying: false,
                             }
                         }
-                        _ => {},
+                        _ => {}
                     }
                 }
 
                 // User finished entering custom osu! installation path
                 AppState::InputtingOsuDirectory { input, retrying } => {
                     let path = PathBuf::from(input.text());
+                    let osu_dir = flatten_osu_installation(&*path);
 
-                    if check_osu_installation(&*path) {
-                        self.osu_dir = Some(path);
+                    if check_osu_installation(&*osu_dir) {
+                        self.osu_dir = Some(osu_dir.into_owned());
                         self.state = AppState::SelectingOsuDomains {
                             items: ListState::default(),
                         };
@@ -148,11 +170,13 @@ Press 'Ctrl+C' to forcefully exit.
                     if !input.text().contains(".") && input.text() != "localhost" {
                         *retrying = true;
                     } else {
-                        self.osu_domains.push(input.text().to_owned());
-                        // FIXME: select newly added domain
-                        // self.state = AppState::SelectingOsuDomains {
-                        //     items: ListState::default(),
-                        // };
+                        self.osu_servers.push(ServerState {
+                            domain: input.text().to_owned(),
+                            enabled: true,
+                        });
+                        self.state = AppState::SelectingOsuDomains {
+                            items: ListState::default(),
+                        };
                     }
                 }
 
@@ -161,8 +185,12 @@ Press 'Ctrl+C' to forcefully exit.
                     let this_exe = env::current_exe()?;
                     let osu_dir = self.osu_dir.as_deref().unwrap();
 
-                    for server in &self.osu_domains {
-                        shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server);
+                    for server in &self.osu_servers {
+                        if !server.enabled {
+                            continue;
+                        }
+
+                        shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server.domain);
                     }
 
                     self.state = AppState::Exiting;
@@ -175,27 +203,39 @@ Press 'Ctrl+C' to forcefully exit.
             return Ok(true);
         }
 
+        // Selecting osu! domains from list
+        if key.code == KeyCode::Char(' ') && key.kind == KeyEventKind::Press {
+            if let AppState::SelectingOsuDomains { items } = &self.state {
+                let selected_idx = items.selected();
+                let server = selected_idx.map(|idx| self.osu_servers.get_mut(idx).unwrap());
+
+                if let Some(server) = server {
+                    server.enabled = !server.enabled;
+                }
+            }
+        }
+
         // List navigation
-        match &mut self.state {
-            AppState::SelectingOsuDirectory { items, .. } |
-            AppState::SelectingOsuDomains { items } => {
+        if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+            if let AppState::SelectingOsuDirectory { items, .. }
+            | AppState::SelectingOsuDomains { items } = &mut self.state
+            {
                 match key.code {
                     KeyCode::Up => items.select_previous(),
                     KeyCode::Down => items.select_next(),
                     KeyCode::PageUp | KeyCode::Home => items.select_first(),
                     KeyCode::PageDown | KeyCode::End => items.select_last(),
-                    _ => {},
+                    _ => {}
                 }
 
                 return Ok(true);
             }
-            _ => {},
         }
 
         // Generic text input
         match &mut self.state {
-            AppState::InputtingOsuDirectory { input, .. } |
-            AppState::InputtingOsuDomain { input, .. } => {
+            AppState::InputtingOsuDirectory { input, .. }
+            | AppState::InputtingOsuDomain { input, .. } => {
                 input.handle_event(key);
                 return Ok(true);
             }
@@ -215,29 +255,30 @@ Press 'Ctrl+C' to forcefully exit.
                 Constraint::Min(0),
             ])
             .areas(frame.area());
-
         let [_, area, _] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Fill(1),
-                Constraint::Min(0),
+                Constraint::Fill(4),
                 Constraint::Fill(1),
             ])
             .areas(area);
-
         let area = area.centered_horizontally(Constraint::Percentage(75));
 
         Self::draw_banner(frame, banner_area);
 
         match &mut self.state {
             AppState::Started => { /* No content */ }
-            AppState::SelectingOsuDirectory { items, default } =>
-                Self::draw_install_dir_picker(frame, area, default, items),
+            AppState::SelectingOsuDirectory { items, default } => {
+                Self::draw_install_dir_picker(frame, area, default, items);
+            }
             AppState::InputtingOsuDirectory { .. } => todo!(),
-            AppState::SelectingOsuDomains { .. } => todo!(),
+            AppState::SelectingOsuDomains { items } => {
+                Self::draw_domains_picker(frame, area, &*self.osu_servers, items);
+            }
             AppState::InputtingOsuDomain { .. } => todo!(),
             AppState::Exiting => Self::draw_exiting(frame, area),
-        }
+        };
     }
 
     fn draw_banner(frame: &mut Frame, area: Rect) {
@@ -256,11 +297,13 @@ Press 'Ctrl+C' to forcefully exit.
         default_dir: &Path,
         list: &mut ListState,
     ) {
+        let default_dir_str = default_dir
+            .to_str()
+            .expect("default osu! path contains invalid characters");
+
         let items = [
-            Span::raw(default_dir.to_str()
-                .expect("default osu! path contains invalid characters")),
-            Span::raw("Custom installation path"),
-            // Span::styled("Custom installation path", Style::new().gray().italic().dim())
+            Span::raw(default_dir_str).bold(),
+            Span::raw("Custom installation path").italic(),
         ];
 
         let options = List::new(items)
@@ -268,11 +311,45 @@ Press 'Ctrl+C' to forcefully exit.
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ")
             .highlight_spacing(HighlightSpacing::Always)
-            .block(Block::new()
-                .padding(Padding::uniform(1))
-                .title(" osu! install directory ")
-                .borders(Borders::ALL)
-                .border_style(Style::new().gray().dim()));
+            .block(
+                Block::new()
+                    .padding(Padding::uniform(1))
+                    .title(" osu! install directory ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::new().gray().dim()),
+            );
+
+        frame.render_stateful_widget(options, area, list);
+    }
+
+    fn draw_domains_picker(
+        frame: &mut Frame,
+        area: Rect,
+        osu_domains: &[ServerState],
+        list: &mut ListState,
+    ) {
+        let items = osu_domains.iter().map(|server| {
+            let style = if server.enabled {
+                Style::default().bold().underlined().white()
+            } else {
+                Style::default().gray()
+            };
+
+            Span::styled(&*server.domain, style)
+        });
+
+        let options = List::new(items)
+            .style(Color::White)
+            .highlight_style(Modifier::REVERSED)
+            .highlight_symbol("> ")
+            .highlight_spacing(HighlightSpacing::Always)
+            .block(
+                Block::new()
+                    .padding(Padding::uniform(1))
+                    .title(" osu! private server domains (Press 'Space' to select, and 'Enter' to finish) ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::new().gray().dim()),
+            );
 
         frame.render_stateful_widget(options, area, list);
     }
