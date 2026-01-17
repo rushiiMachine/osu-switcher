@@ -9,19 +9,18 @@ use ratatui::prelude::*;
 use ratatui::widgets::{
     Block, Borders, HighlightSpacing, List, ListState, Padding, Paragraph, Wrap,
 };
-use ratatui::DefaultTerminal;
 use std::cmp::PartialEq;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::process::exit;
 
 mod input;
 
-pub fn start_config() {
-    let mut terminal: DefaultTerminal = ratatui::init();
+pub fn start_tui() {
     let mut app = App::default();
 
-    app.run(&mut terminal).context("app loop failed").unwrap();
+    ratatui::run(|terminal| app.run(terminal))
+        .context("app loop failed")
+        .unwrap();
 }
 
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -77,7 +76,10 @@ Press 'Ctrl+C' to forcefully exit.
 ";
 
     /// Main loop that triggers rendering and processing input.
-    fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+    fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
+    where
+        <B as Backend>::Error: Send + Sync + 'static,
+    {
         self.init();
 
         loop {
@@ -104,7 +106,10 @@ Press 'Ctrl+C' to forcefully exit.
             },
         };
 
-        for domain in icons::ICONS.keys() {
+        let mut known_servers = icons::ICONS.keys().collect::<Vec<_>>();
+        known_servers.sort_unstable();
+
+        for domain in known_servers {
             self.osu_servers.push(ServerState {
                 domain: (*domain).to_owned(),
                 enabled: false,
@@ -116,7 +121,7 @@ Press 'Ctrl+C' to forcefully exit.
     fn update(&mut self, key: KeyEvent) -> Result<bool> {
         // Handle force quit with Ctrl+C
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
-            exit(1);
+            return Ok(false);
         }
 
         // App has finished and is waiting for any key press to exit

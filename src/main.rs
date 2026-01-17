@@ -1,4 +1,4 @@
-use crate::tui::start_config;
+use crate::tui::start_tui;
 use ini::Ini;
 use seahorse::{App, Command, Context, Flag, FlagType};
 use std::fs::File;
@@ -28,14 +28,14 @@ fn main() -> color_eyre::Result<()> {
     let configure_cmd = Command::new("configure")
         .description("Create desktop shortcuts for servers")
         .usage("osu-switcher.exe switch --osu <OSU_DIR>")
-        .action(|_| start_config());
+        .action(|_| start_tui());
 
     let app = App::new(env!("CARGO_PKG_NAME"))
         .description(env!("CARGO_PKG_DESCRIPTION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
         .usage("osu-switcher.exe <command> [...args]")
-        .action(|_| start_config())
+        .action(|_| start_tui())
         .command(switch_cmd)
         .command(configure_cmd);
 
