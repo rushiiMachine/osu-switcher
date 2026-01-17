@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 /// All the icons of private servers I could find.\
@@ -33,25 +34,24 @@ static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| 
 
 /// Writes a server icon shipped with this executable to the osu! directory
 /// to be used as shortcut icons, since they need to be on disk.
-pub fn write_server_icon(osu_dir: &str, server: &str) -> Option<String> {
-    let path = format!("{osu_dir}/icons/{server}.ico");
+pub fn write_server_icon(osu_dir: &Path, server: &str) -> Option<PathBuf> {
+    let icons_dir = osu_dir.join("icons");
+    let icon_path = icons_dir.join(format!("{server}.ico"));
 
     if let Some(bytes) = ICONS.get(server) {
-        let icons_path = format!("{osu_dir}/icons");
-
-        std::fs::create_dir_all(&*icons_path)
-            .expect(&*format!("failed to create icons directory {icons_path}"));
-        std::fs::write(&*path, bytes)
-            .expect(&*format!("failed to write server icon to disk {path}"));
+        std::fs::create_dir_all(&*icons_dir)
+            .expect(&*format!("failed to create icons directory {icons_dir:?}"));
+        std::fs::write(&*icon_path, bytes)
+            .expect(&*format!("failed to write server icon to disk {icons_dir:?}"));
     } else {
         return None;
     }
 
-    Some(path)
+    Some(icon_path)
 }
 
 /// Returns the path to the osu! logo to be used as a shortcut icon.
 /// This resolves to the osu! executable.
-pub fn osu_server_icon(osu_dir: &str) -> String {
-    format!("{osu_dir}/osu!.exe")
+pub fn osu_server_icon(osu_dir: &Path) -> PathBuf {
+    osu_dir.join("osu!.exe")
 }
