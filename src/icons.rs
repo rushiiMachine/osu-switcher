@@ -12,7 +12,7 @@ use std::sync::LazyLock;
 /// Known missing icons:
 /// - `osuwtf.pw`
 /// - `nerose.click`
-static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
+pub static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
     ("akatsuki.gg", include_bytes!("../assets/akatsuki.gg.ico").as_slice()),
     ("akatsuki.pw", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
     ("ez-pp.farm", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
