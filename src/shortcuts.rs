@@ -18,24 +18,20 @@ use std::{env, fs};
 ///         "../${file%.*}.ico";
 /// done
 /// ```
-/// Known missing icons:
-/// - `osuwtf.pw`
-/// - `nerose.click`
-// TODO: add localhost icon
 static ICONS: LazyLock<HashMap<&'static str, &'static [u8]>> = LazyLock::new(|| HashMap::from([
     // @formatter:off
     ("akatsuki.gg", include_bytes!("../assets/akatsuki.gg.ico").as_slice()),
     ("akatsuki.pw", include_bytes!("../assets/akatsuki.pw.ico").as_slice()),
     ("ez-pp.farm", include_bytes!("../assets/ez-pp.farm.ico").as_slice()),
-    ("fuquila.net", include_bytes!("../assets/fuquila.net.ico").as_slice()),
     ("gatari.pw", include_bytes!("../assets/gatari.pw.ico").as_slice()),
     ("halcyon.moe", include_bytes!("../assets/halcyon.moe.ico").as_slice()),
     ("kawata.pw", include_bytes!("../assets/kawata.pw.ico").as_slice()),
     ("kokisu.moe", include_bytes!("../assets/kokisu.moe.ico").as_slice()),
     ("lemres.de", include_bytes!("../assets/lemres.de.ico").as_slice()),
+    ("localhost", include_bytes!("../assets/localhost.ico").as_slice()),
     ("mamesosu.net", include_bytes!("../assets/mamesosu.net.ico").as_slice()),
+    ("osu.ppy.sb", include_bytes!("../assets/osu.ppy.sb.ico").as_slice()),
     ("osunolimits.dev", include_bytes!("../assets/osunolimits.dev.ico").as_slice()),
-    ("osuokayu.moe", include_bytes!("../assets/osuokayu.moe.ico").as_slice()),
     ("redstar.moe", include_bytes!("../assets/redstar.moe.ico").as_slice()),
     ("ripple.moe", include_bytes!("../assets/ripple.moe.ico").as_slice()),
     ("scosu.net", include_bytes!("../assets/scosu.net.ico").as_slice()),
