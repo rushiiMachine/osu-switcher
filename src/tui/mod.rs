@@ -268,7 +268,7 @@ Press 'Ctrl+C' to forcefully exit.
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Fill(1),
-                Constraint::Fill(4),
+                Constraint::Fill(6),
                 Constraint::Fill(1),
             ])
             .areas(area);
