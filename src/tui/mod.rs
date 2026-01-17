@@ -1,8 +1,8 @@
 use crate::osu_util::{check_osu_installation, find_osu_installation, flatten_osu_installation};
 use crate::tui::input::InputState;
 use crate::{icons, shortcuts};
-use color_eyre::eyre::Context;
 use color_eyre::Result;
+use color_eyre::eyre::Context;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::prelude::*;
@@ -186,19 +186,29 @@ Press 'Ctrl+C' to forcefully exit.
                 }
 
                 // User finished selecting osu! server domains
-                AppState::SelectingOsuDomains { .. } => {
-                    let this_exe = env::current_exe()?;
-                    let osu_dir = self.osu_dir.as_deref().unwrap();
+                AppState::SelectingOsuDomains { items } => {
+                    // Check if custom server option was selected
+                    if let Some(idx) = items.selected()
+                        && idx >= self.osu_servers.len()
+                    {
+                        self.state = AppState::InputtingOsuDomain {
+                            input: InputState::default(),
+                            retrying: false,
+                        }
+                    } else {
+                        let this_exe = env::current_exe()?;
+                        let osu_dir = self.osu_dir.as_deref().unwrap();
 
-                    for server in &self.osu_servers {
-                        if !server.enabled {
-                            continue;
+                        for server in &self.osu_servers {
+                            if !server.enabled {
+                                continue;
+                            }
+
+                            shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server.domain);
                         }
 
-                        shortcuts::create_shortcut(&*osu_dir, &*this_exe, &*server.domain);
+                        self.state = AppState::Exiting;
                     }
-
-                    self.state = AppState::Exiting;
                 }
 
                 _ => {}
@@ -212,9 +222,10 @@ Press 'Ctrl+C' to forcefully exit.
         if key.code == KeyCode::Char(' ') && key.kind == KeyEventKind::Press {
             if let AppState::SelectingOsuDomains { items } = &self.state {
                 let selected_idx = items.selected();
-                let server = selected_idx.map(|idx| self.osu_servers.get_mut(idx).unwrap());
 
-                if let Some(server) = server {
+                if let Some(idx) = selected_idx
+                    && let Some(server) = self.osu_servers.get_mut(idx)
+                {
                     server.enabled = !server.enabled;
                 }
             }
@@ -277,11 +288,33 @@ Press 'Ctrl+C' to forcefully exit.
             AppState::SelectingOsuDirectory { items, default } => {
                 Self::draw_install_dir_picker(frame, area, default, items);
             }
-            AppState::InputtingOsuDirectory { .. } => todo!(),
+            AppState::InputtingOsuDirectory { input, retrying } => {
+                if *retrying {
+                    todo!()
+                }
+
+                Self::draw_text_box(
+                    frame,
+                    area,
+                    input,
+                    " Enter osu! installation directory (eg. 'D:\\osu!') ",
+                )
+            }
             AppState::SelectingOsuDomains { items } => {
                 Self::draw_domains_picker(frame, area, &*self.osu_servers, items);
             }
-            AppState::InputtingOsuDomain { .. } => todo!(),
+            AppState::InputtingOsuDomain { input, retrying } => {
+                if *retrying {
+                    todo!()
+                }
+
+                Self::draw_text_box(
+                    frame,
+                    area,
+                    input,
+                    " Enter new osu! private server domain (eg. 'akatsuki.pw') ",
+                )
+            }
             AppState::Exiting => Self::draw_exiting(frame, area),
         };
     }
@@ -307,8 +340,10 @@ Press 'Ctrl+C' to forcefully exit.
             .expect("default osu! path contains invalid characters");
 
         let items = [
-            Span::raw(default_dir_str).bold(),
-            Span::raw("Custom installation path").italic(),
+            Span::raw(default_dir_str).green().bold(),
+            Span::raw("Enter a custom osu! installation path...")
+                .italic()
+                .gray(),
         ];
 
         let options = List::new(items)
@@ -317,12 +352,14 @@ Press 'Ctrl+C' to forcefully exit.
             .highlight_symbol("> ")
             .highlight_spacing(HighlightSpacing::Always)
             .block(
-                Block::new()
-                    .padding(Padding::uniform(1))
-                    .title(" osu! install directory ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::new().gray().dim()),
+                Self::block_border()
+                    .padding(Padding::vertical(1))
+                    .title(" osu! install directory "),
             );
+
+        let area = area
+            .resize(Size::new(area.width, 6))
+            .centered_vertically(Constraint::Length(6));
 
         frame.render_stateful_widget(options, area, list);
     }
@@ -335,7 +372,7 @@ Press 'Ctrl+C' to forcefully exit.
     ) {
         let items = osu_domains.iter().map(|server| {
             let style = if server.enabled {
-                Style::default().bold().underlined().white()
+                Style::default().bold().underlined().green()
             } else {
                 Style::default().gray()
             };
@@ -343,20 +380,46 @@ Press 'Ctrl+C' to forcefully exit.
             Span::styled(&*server.domain, style)
         });
 
+        let items = items.chain([Span::raw("Enter a custom osu! private server...")
+            .italic()
+            .gray()]);
+
         let options = List::new(items)
             .style(Color::White)
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ")
             .highlight_spacing(HighlightSpacing::Always)
-            .block(
-                Block::new()
-                    .padding(Padding::uniform(1))
-                    .title(" osu! private server domains (Press 'Space' to select, and 'Enter' to finish) ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::new().gray().dim()),
-            );
+            .block(Self::block_border().padding(Padding::vertical(1)).title(
+                " osu! private server domains (Press 'Space' to select, and 'Enter' to continue) ",
+            ));
 
         frame.render_stateful_widget(options, area, list);
+    }
+
+    fn draw_text_box(frame: &mut Frame, area: Rect, input: &InputState, title: &str) {
+        let area = area
+            .resize(Size::new(area.width, 3))
+            .centered_vertically(Constraint::Length(3));
+
+        let input_text = Paragraph::new(input.text())
+            .style(Style::new().white())
+            .block(Self::block_border().padding(Padding::left(1)).title(title));
+
+        frame.render_widget(input_text, area);
+
+        frame.set_cursor_position(Position::new(
+            // Draw the cursor at the current position in the input field.
+            // Offset by 2 to account for border & padding
+            area.x + input.position() as u16 + 2,
+            // Move one line down, from the border to the input line
+            area.y + 1,
+        ))
+    }
+
+    fn block_border() -> Block<'static> {
+        Block::new()
+            .borders(Borders::ALL)
+            .border_style(Style::new().gray().dim())
     }
 
     fn draw_exiting(frame: &mut Frame, area: Rect) {
