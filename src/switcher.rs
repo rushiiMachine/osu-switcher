@@ -1,5 +1,5 @@
 use crate::osu_util;
-use color_eyre::eyre::Context;
+use color_eyre::eyre::{Context, ContextCompat};
 use color_eyre::Result;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ini::Ini;
@@ -10,11 +10,18 @@ use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 
+#[derive(Debug)]
+struct AuthDetails {
+    username: String,
+    password: String,
+    server: String,
+}
+
 /// Switches osu!'s configuration to replace the authentication details with ones for a different
 /// server, if they exist. Afterward, this relaunches osu!.
-pub fn switch_servers(osu_dir: &str, server: &str) -> Result<()> {
+pub fn switch_servers(osu_dir: &str, target_server: &str) -> Result<()> {
     println!("Using '{osu_dir}' as the target osu! installation!");
-    println!("Switching to '{server}'");
+    println!("Switching to '{target_server}'");
 
     let system_username = whoami::username().context("failed getting system username")?;
     let osu_cfg = format!("{osu_dir}/osu!.{system_username}.cfg");
@@ -26,7 +33,7 @@ pub fn switch_servers(osu_dir: &str, server: &str) -> Result<()> {
     if !fs::exists(&*osu_cfg)? {
         println!("Missing osu!.{system_username}.cfg, launching the game normally...");
         clear_logs(&*osu_dir)?;
-        restart_osu(&*osu_exe, server)?;
+        restart_osu(&*osu_exe, target_server)?;
         return Ok(());
     }
 
@@ -47,64 +54,82 @@ pub fn switch_servers(osu_dir: &str, server: &str) -> Result<()> {
     let mut osu_ini = Ini::load_from_file(&osu_cfg)
         .with_context(|| format!("failed to read osu! config {osu_cfg}"))?;
 
-    let (old_server, current_username, current_password) = {
-        let cfg = osu_ini
-            .section(None::<String>)
-            .expect("Corrupted osu user config");
-
-        let old_server = cfg.get("CredentialEndpoint").unwrap_or("").to_string();
-
-        (
-            if old_server != "" {
-                old_server
-            } else {
-                "osu.ppy.sh".to_string()
-            },
-            cfg.get("Username").unwrap_or("").to_string(),
-            cfg.get("Password").unwrap_or("").to_string(),
-        )
-    };
-
-    if old_server != server {
-        match switcher_ini.section(Some(server)) {
-            None => {
-                osu_ini.with_section(None::<String>).set("Password", "");
-            }
-            Some(section) => {
-                let new_username = section.get("Username").unwrap_or("");
-                let new_password = section.get("Password").unwrap_or("");
-                let new_server = if server == "osu.ppy.sh" { "" } else { &server };
-
-                osu_ini
-                    .with_section(None::<String>)
-                    .set("Username", new_username)
-                    .set("Password", new_password)
-                    .set("CredentialEndpoint", new_server);
-
-                edit_db(Path::new(&*osu_db), new_username)?;
-            }
-        }
-
-        switcher_ini
-            .with_section(Some(old_server))
-            .set("Username", current_username)
-            .set("Password", current_password);
-
-        osu_ini
-            .write_to_file(&osu_cfg)
-            .expect("Failed to save osu user config");
-        switcher_ini
-            .write_to_file(&switcher_cfg)
-            .expect("Failed to save switcher config");
-    }
+    // Extract old auth info from osu config
+    let old_auth = extract_auth_details(&osu_ini)?;
 
     clear_logs(&*osu_dir)?;
 
-    if clear_updater(&*osu_dir)? {
-        restart_osu(&osu_exe, server)?;
+    // If pending update confirmed, then remove all auth and launch directly
+    if !clear_updater(&*osu_dir)? {
+        osu_ini
+            .with_section(None::<String>)
+            .set("Username", "")
+            .set("Password", "")
+            .set("CredentialEndpoint", "");
+
+        restart_osu(&osu_exe, target_server)?;
+        return Ok(());
     }
 
+    if old_auth.server != target_server {
+        let new_server = match target_server {
+            "osu.ppy.sh" => "",
+            server => server,
+        };
+        let new_auth = match switcher_ini.section(Some(target_server)) {
+            None => AuthDetails {
+                username: String::from(""),
+                password: String::from(""),
+                server: String::from(new_server),
+            },
+            Some(section) => AuthDetails {
+                username: section.get("Username").unwrap_or("").to_owned(),
+                password: section.get("Password").unwrap_or("").to_owned(),
+                server: String::from(new_server),
+            },
+        };
+
+        edit_db(Path::new(&*osu_db), &*new_auth.username)?;
+
+        osu_ini
+            .with_section(None::<String>)
+            .set("Username", new_auth.username)
+            .set("Password", new_auth.password)
+            .set("CredentialEndpoint", new_auth.server);
+        osu_ini
+            .write_to_file(&osu_cfg)
+            .context("failed to write osu! config")?;
+    }
+
+    // *Always* save old credentials to switcher config
+    switcher_ini
+        .with_section(Some(old_auth.server))
+        .set("Username", old_auth.username)
+        .set("Password", old_auth.password);
+    switcher_ini
+        .write_to_file(&switcher_cfg)
+        .context("failed to write switcher config")?;
+
+    restart_osu(&osu_exe, target_server)?;
     Ok(())
+}
+
+/// Extracts authentication details from osu!'s main config.
+fn extract_auth_details(osu_config: &Ini) -> Result<AuthDetails> {
+    let cfg = osu_config
+        .section(None::<String>)
+        .context("corrupted osu! config")?;
+
+    let server = match cfg.get("CredentialEndpoint") {
+        Some("") | None => "osu.ppy.sh".to_owned(),
+        Some(server) => server.to_owned(),
+    };
+
+    Ok(AuthDetails {
+        server,
+        username: cfg.get("Username").unwrap_or("").to_owned(),
+        password: cfg.get("Password").unwrap_or("").to_owned(),
+    })
 }
 
 /// Edits the osu!.db to replace the username stored within.

@@ -20,8 +20,6 @@ An osu!stable server + account switcher to automate signing in across different 
 
 - osu!switcher persists itself to `%localappdata%/osu!switcher/` to ensure the shortcuts don't break
   if the executable gets deleted later.
-- Due to an osu!stable bug outside my control, you may need to sign-in **twice** for new servers across separate
-  osu! launches before your credentials for the new server can be permanently saved.
 - If you plan on moving osu!'s installation directory (e.g. to a different drive),
   the shortcuts will have to be regenerated.
 

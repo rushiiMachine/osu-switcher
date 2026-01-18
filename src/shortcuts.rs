@@ -95,7 +95,7 @@ fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) -> Result
         "switch --osu \"{0}\" --server \"{server}\"",
         osu_dir
             .to_str()
-            .expect("osu! install directory contains invalid characters")
+            .context("osu! install directory contains invalid characters")?
     );
 
     let icon_path = write_server_icon(osu_dir, server)?;
@@ -111,7 +111,7 @@ fn create_shortcut(osu_dir: &Path, switcher_path: &Path, server: &str) -> Result
     link.set_icon_location(Some(
         icon_path
             .to_str()
-            .expect("icon path contains invalid characters")
+            .context("icon path contains invalid characters")?
             .to_owned(),
     ));
     link.set_name(Some(name.clone()));

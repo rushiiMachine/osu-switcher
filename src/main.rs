@@ -1,5 +1,5 @@
 use crate::tui::start_tui;
-use seahorse::{App, Command, Context, Flag, FlagType};
+use seahorse::{ActionError, ActionResult, App, Command, Context, Flag, FlagType};
 use std::{env, panic};
 
 mod osu_util;
@@ -19,7 +19,7 @@ fn main() -> color_eyre::Result<()> {
         .usage("osu-switcher.exe switch --osu <OSU_DIR> --server <SERVER_ADDRESS>")
         .flag(server_flag)
         .flag(osu_flag.clone())
-        .action(switch);
+        .action_with_result(switch);
 
     let configure_cmd = Command::new("configure")
         .description("Create desktop shortcuts for servers")
@@ -48,13 +48,19 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn switch(ctx: &Context) {
-    let osu_dir = ctx
-        .string_flag("osu")
-        .expect("The --osu flag is required in order to start osu");
+fn switch(ctx: &Context) -> ActionResult {
+    let osu_dir = match ctx.string_flag("osu") {
+        Ok(s) => s,
+        Err(_) => {
+            return Err(ActionError {
+                message: "The --osu flag is required in order to start osu".to_owned(),
+            });
+        }
+    };
     let server = ctx
         .string_flag("server")
         .unwrap_or("osu.ppy.sh".to_string());
 
     switcher::switch_servers(&*osu_dir, &*server).unwrap();
+    Ok(())
 }
